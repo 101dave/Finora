@@ -7,18 +7,14 @@ import { formatMoney } from './format.js';
 
 let instance = null;
 
-const LIGHT_PALETTE = [
-  '#a1542b', '#c1743f', '#7d5a33', '#b0855a', '#8d4a2a',
-  '#c99a6a', '#6f4b2c', '#d1a77c', '#8a6a4a', '#9c6b45',
+/* A greyscale ramp, dark to light: the only "colour" this app has. */
+const PALETTE = [
+  '#0d0d0d', '#333333', '#4d4d4d', '#666666', '#7d7d7d',
+  '#929292', '#a6a6a6', '#bababa', '#cdcdcd', '#dedede',
 ];
 
-const DARK_PALETTE = [
-  '#e8a06b', '#f0c096', '#c98a5f', '#f5d5b5', '#d97a45',
-  '#e8c9a0', '#b57a52', '#f0dcc4', '#cfa07a', '#d8956a',
-];
-
-export function paletteFor(theme) {
-  return theme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
+export function paletteFor() {
+  return PALETTE;
 }
 
 export function destroyDonut() {
@@ -31,9 +27,8 @@ export function destroyDonut() {
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {{label: string, value: number}[]} series
- * @param {'light'|'dark'} theme
  */
-export function renderDonut(canvas, series, theme) {
+export function renderDonut(canvas, series) {
   if (!canvas) return null;
 
   const Chart = window.Chart;
@@ -44,14 +39,14 @@ export function renderDonut(canvas, series, theme) {
   }
   canvas.hidden = false;
 
-  const colors = paletteFor(theme);
+  const colors = paletteFor();
   const labels = series.map((point) => point.label);
   const values = series.map((point) => point.value);
   const background = labels.map((_, index) => colors[index % colors.length]);
 
   const styles = getComputedStyle(document.documentElement);
   const surface = styles.getPropertyValue('--surface').trim() || '#ffffff';
-  const ink = styles.getPropertyValue('--ink').trim() || '#221c16';
+  const ink = styles.getPropertyValue('--ink').trim() || '#0d0d0d';
 
   const tooltip = {
     backgroundColor: ink,

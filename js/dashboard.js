@@ -28,7 +28,6 @@ import {
   todayISO,
 } from './format.js';
 import { humanError } from './supabase-rest.js';
-import { currentTheme, onThemeChange } from './theme.js';
 import { toast } from './toast.js';
 
 const state = {
@@ -43,7 +42,6 @@ const state = {
 };
 
 let refs = {};
-let unsubscribeTheme = null;
 let loadToken = 0;
 
 export function mountDashboard({ store, user, onSignOut }) {
@@ -409,8 +407,7 @@ export function mountDashboard({ store, user, onSignOut }) {
   function renderBreakdown() {
     const series = expenseSeries(state.transactions);
     const total = round2(series.reduce((sum, point) => sum + point.value, 0));
-    const theme = currentTheme();
-    const colors = paletteFor(theme);
+    const colors = paletteFor();
 
     clear(refs.legend);
     show(refs.donutWrap, series.length > 0);
@@ -432,7 +429,7 @@ export function mountDashboard({ store, user, onSignOut }) {
       ]));
     }
 
-    renderDonut(refs.donut, series, theme);
+    renderDonut(refs.donut, series);
   }
 
   function renderInsights(totals) {
@@ -731,7 +728,7 @@ export function mountDashboard({ store, user, onSignOut }) {
   }
 
   /* ---------------------------------------------------------------- */
-  /* account menu, theme, filters                                      */
+  /* account menu, filters                                             */
   /* ---------------------------------------------------------------- */
 
   function setupAccount() {
@@ -863,7 +860,6 @@ export function mountDashboard({ store, user, onSignOut }) {
     setupDialogs();
     load();
 
-    unsubscribeTheme = onThemeChange(() => renderBreakdown());
   }
 
   return {
@@ -873,7 +869,6 @@ export function mountDashboard({ store, user, onSignOut }) {
       return state.month;
     },
     destroy() {
-      unsubscribeTheme?.();
       destroyDonut();
     },
   };

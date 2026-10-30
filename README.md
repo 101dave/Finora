@@ -55,7 +55,7 @@ npm test        # 9 dependency-free unit tests (money, percentages, dates)
 
 ```
 index.html            markup for both screens and every dialog
-styles.css            one warm palette, light + dark, responsive table → cards
+styles.css            black and white, light only, responsive table → cards
 js/
   app.js              picks a screen: auth or dashboard
   config.js           Supabase URL, publishable key, currency, limits
@@ -66,7 +66,6 @@ js/
   chart.js            doughnut wrapper around the vendored Chart.js
   supabase-rest.js    small fetch client for GoTrue + PostgREST
   dom.js              tiny DOM helpers (no innerHTML with user data)
-  theme.js            system preference, remembered choice
   toast.js            one toast at a time, optional action
   store/
     supabase-store.js the only store: PostgREST behind RLS
@@ -185,9 +184,41 @@ to happen in a browser with a real inbox.
   (`aria-hidden`) is decorative rather than the only source of information.
 - Tables have real headers and a caption; on narrow screens rows become cards
   with the same reading order.
-- Light and dark themes follow the system preference until you choose one, and
-  the choice is remembered. Focus outlines are never removed.
+- Every row action is a 44 × 44 px target on a phone, and focus after a delete
+  clears the sticky header instead of hiding under it.
+- One light theme. No dark variant and no `prefers-color-scheme` rule, so a
+  phone in dark mode still gets the same black-on-white page. Focus outlines are
+  never removed.
 - `prefers-reduced-motion` turns off transitions and chart animation.
+
+---
+
+## Design
+
+Monochrome on purpose: black ink, white paper, one grey ramp. There is no accent
+colour and no dark theme, so the page looks the same everywhere — including on a
+phone set to dark mode. Meaning that used to ride on colour is carried by weight,
+sign and shape instead:
+
+- income is bold with a `+`, expense is regular with a `−`;
+- the budget meter shades grey near the limit and turns to black hatching past it;
+- errors are bold, with a 2px left rule;
+- the doughnut uses a ten-step grey ramp, and the legend repeats every value.
+
+Contrast: body text 19.4:1, secondary text 6.7:1, control borders 3.4:1, white on
+black buttons 19.4:1.
+
+On a phone the layout is rebuilt rather than squeezed:
+
+- the header keeps one row — the account collapses to its avatar and the “Add
+  entry” label drops away below 380px;
+- the summary is two-up with the balance full width, so the month fits on one
+  screen;
+- entries become bordered cards with 44px actions;
+- dialogs dock to the bottom as sheets, with a scrolling body and a sticky footer;
+- 16px inputs stop iOS from zooming when a field is focused;
+- `env(safe-area-inset-*)` keeps the header, footer and toast clear of the notch
+  and home indicator; the viewport sets `viewport-fit=cover` to make room.
 
 ---
 
@@ -202,7 +233,7 @@ that mattered were fixed in the same pass.
 | `authenticated` held `TRUNCATE` on both tables, which bypasses RLS | medium | revoked |
 | A slow month request could overwrite the month you had just switched to | medium | fixed (request token) |
 | `schema.sql` named the index differently from the deployed one, so re-running it would duplicate it | medium | fixed |
-| `.badge` and avatar text were 4.35:1 on their background in the light theme | medium | fixed (now 4.9:1) |
+| `.badge` and avatar text were 4.35:1 on their background in the old warm palette | medium | fixed (palette since replaced) |
 | Filter and auth toggles used `role="tablist"` with no tab panels | low | fixed (`aria-pressed` group) |
 | On mobile, `display:none` on `<thead>` dropped the headers from the accessibility tree | low | fixed (visually hidden + explicit roles) |
 | Deleting from the edit dialog closed it before you confirmed | low | fixed |
@@ -213,11 +244,13 @@ that mattered were fixed in the same pass.
 **Verified after the fixes**
 
 - `npm test` — 9/9 unit tests.
-- jsdom integration — 25 dashboard checks against a mocked GoTrue/PostgREST and
-  14 markup checks proving `?demo=1` is inert, the sign-in screen renders and the
-  demo plumbing is gone. No request is made on boot.
-- axe-core — 0 WCAG A/AA violations in six runs: the auth screen, the dashboard
-  (light and dark), and the entry, budget and confirm dialogs.
+- jsdom integration — 19 dashboard checks against a mocked GoTrue/PostgREST and
+  22 static + auth checks: every colour token is a pure grey, no dark-theme
+  selector exists, `prefers-color-scheme` is never read, the mobile rules
+  (bottom-sheet dialogs, 44px targets, 16px inputs, safe areas) are present, and
+  no request is made on boot.
+- axe-core — 0 WCAG A/AA violations in five runs: the auth screen with the OS
+  forced to dark, the dashboard, and the entry, budget and confirm dialogs.
 - RLS — two impersonated users: A saw 1 row and none of B’s, cross-user updates
   and deletes affected 0 rows, a forged `user_id` insert failed with `42501`,
   and `anon` was denied. Test users and rows were deleted afterwards; the
@@ -225,10 +258,10 @@ that mattered were fixed in the same pass.
 
 **Still open (deliberately, or needs you)**
 
-- **No Content-Security-Policy.** Adding one means moving the small inline theme
-  script into its own file so `script-src 'self'` is possible, plus
-  `connect-src 'self' https://*.supabase.co`. Worth doing before this is widely
-  shared; skipped here because it cannot be verified without a real browser.
+- **No Content-Security-Policy.** The inline theme script is gone, so
+  `script-src 'self'` is now possible without any refactor; add
+  `connect-src 'self' https://*.supabase.co` alongside it. Skipped here because
+  it cannot be verified without a real browser.
 - **Default Supabase SMTP** is rate limited (2 emails/hour) and intended for
   testing. Configure custom SMTP before inviting anyone, or confirmation emails
   will silently fail.
