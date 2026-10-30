@@ -1,7 +1,7 @@
 # Finora
 
-A quiet personal expense tracker. Log what comes in and what goes out, set one
-monthly budget, and see the whole month honestly.
+A quiet personal expense tracker. Log what comes in and what goes out, set a
+monthly and a weekly budget, and see the whole month honestly.
 
 No framework, no build step, no package to install: plain HTML, CSS and ES
 modules, with Supabase for real accounts and real storage.
@@ -19,8 +19,10 @@ modules, with Supabase for real accounts and real storage.
   Edit and delete any entry.
 - **One month at a time** — move backwards and forwards through months; the
   current month is clipped to today.
-- **A monthly budget** — one budget per month, with a meter that turns amber near
-  the limit and red past it.
+- **Two budgets** — one per month and one per week (Monday to Sunday, ISO
+  weeks). Each has its own meter: grey near the limit, black hatching past it.
+  The monthly meter follows the month you are browsing; the weekly one always
+  reads the week you are in, and says which dates that is.
 - **Filters** — by type, category and free-text search across notes.
 - **A category breakdown** — a Chart.js doughnut plus a text legend that carries
   every value, so the canvas is never the only source of information.
@@ -75,8 +77,9 @@ tests/                node --test, no dependencies
 ```
 
 `dashboard.js` reads and writes through one small store object — `loadMonth`,
-`createTransaction`, `updateTransaction`, `deleteTransaction`, `setBudget`,
-`clearBudget` — and never builds a query itself. All filtering, totals and
+`loadWeek`, `createTransaction`, `updateTransaction`, `deleteTransaction`,
+`setBudget(period, periodStart, amount)`, `clearBudget(period, periodStart)` —
+and never builds a query itself. All filtering, totals and
 formatting happen in the browser on rows the database already agreed to return.
 
 ---
@@ -95,9 +98,16 @@ with cascade), `type` (`income`/`expense`), `amount` `numeric(12,2)`, `category`
 `occurred_on` `date`, `note`, timestamps. Checks reject non-positive amounts,
 bad types, notes over 200 characters and dates outside 2000–2100.
 
-`budgets` — primary key `(user_id, month)`, one budget per month, `month` pinned
-to the first of the month, `amount numeric(12,2)` above zero (removing a budget
-deletes the row rather than storing 0).
+`budgets` — primary key `(user_id, period, period_start)`, where `period` is
+`month` or `week` and `period_start` is the 1st of the month or the Monday of an
+ISO week. A check constraint enforces exactly that shape, and `amount` is
+`numeric(12,2)` above zero (removing a budget deletes the row rather than
+storing 0). Weekly budgets need their own query because a Monday–Sunday week
+usually straddles two months.
+
+If you are upgrading a database that predates weekly budgets, run
+`supabase/migrate-weekly-budget.sql` once; it renames `month` to `period_start`,
+adds `period`, and swaps the primary key.
 
 Both tables have `updated_at` triggers, and an index on
 `(user_id, occurred_on desc, created_at desc)` for the only listing query the
@@ -166,7 +176,8 @@ That is the URL the portfolio case study links to.
 - [ ] `https://your-url/` shows the sign-in screen, not a blank page.
 - [ ] Sign up with a real address, open the confirmation email, confirm, sign in.
 - [ ] Add an entry, reload, confirm it is still there.
-- [ ] Set a budget, reload, confirm the meter keeps its value.
+- [ ] Set a monthly budget and a weekly budget, reload, confirm both meters keep
+      their values.
 - [ ] Sign out, sign back in; entries are still yours.
 - [ ] A second account sees none of the first account's entries.
 
@@ -243,8 +254,9 @@ that mattered were fixed in the same pass.
 
 **Verified after the fixes**
 
-- `npm test` — 9/9 unit tests.
-- jsdom integration — 19 dashboard checks against a mocked GoTrue/PostgREST and
+- `npm test` — 12/12 unit tests, including Monday-of-the-week maths and the
+  week-range label.
+- jsdom integration — 31 dashboard checks against a mocked GoTrue/PostgREST and
   22 static + auth checks: every colour token is a pure grey, no dark-theme
   selector exists, `prefers-color-scheme` is never read, the mobile rules
   (bottom-sheet dialogs, 44px targets, 16px inputs, safe areas) are present, and

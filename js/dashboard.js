@@ -10,8 +10,10 @@ import { allCategories, categoriesFor, isKnownCategory, typeLabel } from './cate
 import { destroyDonut, paletteFor, renderDonut } from './chart.js';
 import { $, $$, clear, el, setText, show } from './dom.js';
 import {
+  addDays,
   currentMonthKey,
   daysInMonth,
+  formatDayRange,
   elapsedDays,
   formatEntryDate,
   formatFullDate,
@@ -26,6 +28,7 @@ import {
   round2,
   shiftMonthKey,
   todayISO,
+  weekStartOf,
 } from './format.js';
 import { humanError } from './supabase-rest.js';
 import { toast } from './toast.js';
@@ -34,6 +37,10 @@ const state = {
   month: currentMonthKey(),
   transactions: [],
   budget: null,
+  weekKey: weekStartOf(todayISO()),
+  weekTransactions: [],
+  weekBudget: null,
+  budgetPeriod: 'month',
   loading: false,
   error: null,
   filters: { type: 'all', category: 'all', query: '' },
@@ -60,14 +67,23 @@ export function mountDashboard({ store, user, onSignOut }) {
     balanceNote: $('#balanceNote'),
 
     budgetBody: $('#budgetBody'),
-    budgetEmpty: $('#budgetEmpty'),
+    budgetEmptyNote: $('#budgetEmptyNote'),
     budgetSpent: $('#budgetSpent'),
     budgetLeft: $('#budgetLeft'),
     budgetFill: $('#budgetFill'),
     budgetMeter: $('#budgetMeter'),
     budgetNote: $('#budgetNote'),
     editBudget: $('#editBudgetBtn'),
-    budgetEmptyBtn: $('#budgetEmptyBtn'),
+
+    weekBody: $('#weekBody'),
+    weekEmptyNote: $('#weekEmptyNote'),
+    weekSpent: $('#weekSpent'),
+    weekLeft: $('#weekLeft'),
+    weekFill: $('#weekFill'),
+    weekMeter: $('#weekMeter'),
+    weekNote: $('#weekNote'),
+    weekRange: $('#weekRange'),
+    editWeekBudget: $('#editWeekBudgetBtn'),
 
     entriesCount: $('#entriesCount'),
     typeTabs: $('#typeTabs'),
@@ -122,6 +138,7 @@ export function mountDashboard({ store, user, onSignOut }) {
 
     budgetDialog: $('#budgetDialog'),
     budgetForm: $('#budgetForm'),
+    budgetTitle: $('#budgetTitle'),
     budgetMonthLabel: $('#budgetMonthLabel'),
     budgetInput: $('#budgetAmountInput'),
     budgetAmountError: $('#budgetAmountError'),
@@ -186,22 +203,31 @@ export function mountDashboard({ store, user, onSignOut }) {
   async function load() {
     const token = ++loadToken;
     const monthKey = state.month;
+    const weekKey = weekStartOf(todayISO());
 
     state.loading = true;
     show(refs.loadError, false);
     renderMonthChrome();
 
     try {
-      const data = await store.loadMonth(monthKey);
+      const [month, week] = await Promise.all([
+        store.loadMonth(monthKey),
+        store.loadWeek(weekKey),
+      ]);
       if (token !== loadToken) return; // a newer month took over while this was in flight
-      state.transactions = data.transactions ?? [];
-      state.budget = typeof data.budget === 'number' ? data.budget : null;
+      state.weekKey = weekKey;
+      state.transactions = month.transactions ?? [];
+      state.budget = typeof month.budget === 'number' ? month.budget : null;
+      state.weekTransactions = week.transactions ?? [];
+      state.weekBudget = typeof week.budget === 'number' ? week.budget : null;
       state.error = null;
     } catch (error) {
       if (token !== loadToken) return;
       state.error = error;
       state.transactions = [];
       state.budget = null;
+      state.weekTransactions = [];
+      state.weekBudget = null;
       setText(refs.loadErrorText, humanError(error, 'Could not load this month.'));
       show(refs.loadError, true);
     } finally {
@@ -258,37 +284,74 @@ export function mountDashboard({ store, user, onSignOut }) {
     setText(refs.balanceNote, totals.balance >= 0 ? 'Left after expenses' : 'More out than in');
   }
 
-  function renderBudget(totals) {
-    const hasBudget = typeof state.budget === 'number' && state.budget > 0;
+  /** One meter per period: the month on screen, and the week you are in. */
+  function renderBudgetBlock(elements, { spent, budget, emptyCopy }) {
+    const hasBudget = typeof budget === 'number' && budget > 0;
 
-    show(refs.budgetBody, hasBudget);
-    show(refs.budgetEmpty, !hasBudget);
-    setText(refs.editBudget, hasBudget ? 'Edit' : 'Set budget');
+    show(elements.body, hasBudget);
+    show(elements.empty, !hasBudget);
+    setText(elements.toggle, hasBudget ? 'Edit' : 'Set budget');
 
-    if (!hasBudget) return;
-
-    const spent = totals.expense;
-    const ratio = spent / state.budget;
-    const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-
-    setText(refs.budgetSpent, formatMoney(spent));
-    setText(refs.budgetLeft, `of ${formatMoney(state.budget)}`);
-
-    refs.budgetFill.style.width = `${percent}%`;
-    refs.budgetFill.classList.toggle('is-near', ratio >= 0.8 && ratio <= 1);
-    refs.budgetFill.classList.toggle('is-over', ratio > 1);
-
-    refs.budgetMeter.setAttribute('aria-valuenow', String(percent));
-    refs.budgetMeter.setAttribute('aria-valuetext', `${percent}% of the ${formatMoney(state.budget)} budget used`);
-
-    const remaining = round2(state.budget - spent);
-    if (remaining < 0) {
-      setText(refs.budgetNote, `${formatMoney(Math.abs(remaining))} over · ${formatPercent(spent, state.budget)} of budget used`);
-    } else if (remaining === 0) {
-      setText(refs.budgetNote, 'Exactly on budget — nothing left, nothing over.');
-    } else {
-      setText(refs.budgetNote, `${formatMoney(remaining)} left · ${formatPercent(spent, state.budget)} used`);
+    if (!hasBudget) {
+      setText(elements.empty, emptyCopy);
+      return;
     }
+
+    const ratio = spent / budget;
+    const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+    const remaining = round2(budget - spent);
+
+    setText(elements.spent, formatMoney(spent));
+    setText(elements.left, `of ${formatMoney(budget)}`);
+
+    elements.fill.style.width = `${percent}%`;
+    elements.fill.classList.toggle('is-near', ratio >= 0.8 && ratio <= 1);
+    elements.fill.classList.toggle('is-over', ratio > 1);
+
+    elements.meter.setAttribute('aria-valuenow', String(percent));
+    elements.meter.setAttribute('aria-valuetext', `${percent}% of the ${formatMoney(budget)} budget used`);
+
+    if (remaining < 0) {
+      setText(elements.note, `${formatMoney(Math.abs(remaining))} over · ${formatPercent(spent, budget)} of budget used`);
+    } else if (remaining === 0) {
+      setText(elements.note, 'Exactly on budget — nothing left, nothing over.');
+    } else {
+      setText(elements.note, `${formatMoney(remaining)} left · ${formatPercent(spent, budget)} used`);
+    }
+  }
+
+  function renderBudget(totals) {
+    renderBudgetBlock({
+      body: refs.budgetBody,
+      empty: refs.budgetEmptyNote,
+      toggle: refs.editBudget,
+      spent: refs.budgetSpent,
+      left: refs.budgetLeft,
+      fill: refs.budgetFill,
+      meter: refs.budgetMeter,
+      note: refs.budgetNote,
+    }, {
+      spent: totals.expense,
+      budget: state.budget,
+      emptyCopy: 'No budget for this month. One number, and the bar does the worrying.',
+    });
+
+    renderBudgetBlock({
+      body: refs.weekBody,
+      empty: refs.weekEmptyNote,
+      toggle: refs.editWeekBudget,
+      spent: refs.weekSpent,
+      left: refs.weekLeft,
+      fill: refs.weekFill,
+      meter: refs.weekMeter,
+      note: refs.weekNote,
+    }, {
+      spent: summarize(state.weekTransactions).expense,
+      budget: state.weekBudget,
+      emptyCopy: 'No weekly budget. A smaller number per week is easier to keep.',
+    });
+
+    setText(refs.weekRange, `Monday to Sunday, ${formatDayRange(state.weekKey, addDays(state.weekKey, 6))}`);
   }
 
   function renderCategoryFilter() {
@@ -612,13 +675,21 @@ export function mountDashboard({ store, user, onSignOut }) {
   /* budget dialog                                                     */
   /* ---------------------------------------------------------------- */
 
-  function openBudgetDialog() {
+  function openBudgetDialog(period = 'month') {
+    state.budgetPeriod = period;
+
     setError(refs.budgetAmountError);
     setError(refs.budgetError);
 
-    setText(refs.budgetMonthLabel, `Budget for ${monthLabel(state.month)}.`);
-    refs.budgetInput.value = state.budget != null ? state.budget.toFixed(2) : '';
-    show(refs.removeBudget, state.budget != null);
+    const isWeek = period === 'week';
+    const current = isWeek ? state.weekBudget : state.budget;
+
+    setText(refs.budgetTitle, isWeek ? 'Set weekly budget' : 'Set monthly budget');
+    setText(refs.budgetMonthLabel, isWeek
+      ? `The week of ${formatDayRange(state.weekKey, addDays(state.weekKey, 6))}.`
+      : `Budget for ${monthLabel(state.month)}.`);
+    refs.budgetInput.value = current != null ? current.toFixed(2) : '';
+    show(refs.removeBudget, current != null);
 
     refs.budgetDialog.showModal();
     requestAnimationFrame(() => refs.budgetInput.focus());
@@ -641,11 +712,16 @@ export function mountDashboard({ store, user, onSignOut }) {
     state.busy = true;
     setBusy(refs.saveBudget, true, 'Saving…', 'Save budget');
 
+    const period = state.budgetPeriod;
+    const periodStart = period === 'week' ? state.weekKey : monthStart(state.month);
+
     try {
-      await store.setBudget(state.month, amount);
+      await store.setBudget(period, periodStart, amount);
       closeDialog(refs.budgetDialog);
       await load();
-      toast(`Budget set for ${monthLabel(state.month, { short: true })}.`);
+      toast(period === 'week'
+        ? 'Weekly budget saved.'
+        : `Budget set for ${monthLabel(state.month, { short: true })}.`);
     } catch (error) {
       setError(refs.budgetError, humanError(error, 'Could not save the budget.'));
     } finally {
@@ -655,11 +731,14 @@ export function mountDashboard({ store, user, onSignOut }) {
   }
 
   async function handleBudgetRemove() {
+    const period = state.budgetPeriod;
+    const periodStart = period === 'week' ? state.weekKey : monthStart(state.month);
+
     closeDialog(refs.budgetDialog);
     try {
-      await store.clearBudget(state.month);
+      await store.clearBudget(period, periodStart);
       await load();
-      toast('Budget removed.');
+      toast(period === 'week' ? 'Weekly budget removed.' : 'Budget removed.');
     } catch (error) {
       toast(humanError(error, 'Could not remove the budget.'));
     }
@@ -832,8 +911,8 @@ export function mountDashboard({ store, user, onSignOut }) {
 
     refs.budgetForm.addEventListener('submit', handleBudgetSubmit);
     refs.removeBudget.addEventListener('click', handleBudgetRemove);
-    refs.editBudget.addEventListener('click', openBudgetDialog);
-    refs.budgetEmptyBtn.addEventListener('click', openBudgetDialog);
+    refs.editBudget.addEventListener('click', () => openBudgetDialog('month'));
+    refs.editWeekBudget.addEventListener('click', () => openBudgetDialog('week'));
 
     refs.addEntry.addEventListener('click', () => openEntryDialog(null));
     refs.entriesEmptyAdd.addEventListener('click', () => openEntryDialog(null));

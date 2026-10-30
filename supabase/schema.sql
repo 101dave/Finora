@@ -42,13 +42,20 @@ create table if not exists public.transactions (
   updated_at  timestamptz not null default now()
 );
 
+-- One row per period: `month` budgets are keyed by the 1st of the month,
+-- `week` budgets by the Monday of an ISO week (Monday–Sunday).
 create table if not exists public.budgets (
-  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  month      date not null check (month = date_trunc('month', month)::date),
-  amount     numeric(12,2) not null check (amount > 0 and amount <= 999999999.99),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  primary key (user_id, month)
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  period       text not null default 'month' check (period in ('month', 'week')),
+  period_start date not null,
+  amount       numeric(12,2) not null check (amount > 0 and amount <= 999999999.99),
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  primary key (user_id, period, period_start),
+  constraint budgets_period_start_check check (
+    (period = 'month' and period_start = date_trunc('month', period_start)::date)
+    or (period = 'week' and extract(isodow from period_start) = 1)
+  )
 );
 
 -- One index for the only listing query the app makes: this user, one month.

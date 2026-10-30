@@ -109,25 +109,50 @@
         <div class="column column-main">
           <article class="card budget-card" aria-labelledby="budgetHeading">
             <div class="card-head">
-              <h2 id="budgetHeading">Monthly budget</h2>
-              <button class="link-btn" id="editBudgetBtn" type="button">Set budget</button>
+              <h2 id="budgetHeading">Budgets</h2>
             </div>
 
-            <div id="budgetBody">
-              <div class="budget-numbers">
-                <p class="budget-spent" id="budgetSpent">—</p>
-                <p class="budget-of" id="budgetLeft"></p>
+            <section class="budget-block" aria-labelledby="budgetMonthTitle">
+              <div class="budget-block-head">
+                <h3 class="budget-title" id="budgetMonthTitle">This month</h3>
+                <button class="link-btn" id="editBudgetBtn" type="button">Set budget</button>
               </div>
-              <div class="meter" id="budgetMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Budget used">
-                <span class="meter-fill" id="budgetFill"></span>
-              </div>
-              <p class="card-note" id="budgetNote"></p>
-            </div>
 
-            <div class="budget-empty" id="budgetEmpty" hidden>
-              <p>No budget for this month yet. One number, and the bar does the worrying for you.</p>
-              <button class="btn ghost sm" id="budgetEmptyBtn" type="button">Set a budget</button>
-            </div>
+              <div id="budgetBody">
+                <div class="budget-numbers">
+                  <p class="budget-spent" id="budgetSpent">—</p>
+                  <p class="budget-of" id="budgetLeft"></p>
+                </div>
+                <div class="meter" id="budgetMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Monthly budget used">
+                  <span class="meter-fill" id="budgetFill"></span>
+                </div>
+                <p class="card-note" id="budgetNote"></p>
+              </div>
+
+              <p class="card-note budget-empty-note" id="budgetEmptyNote" hidden></p>
+            </section>
+
+            <section class="budget-block" aria-labelledby="weekBudgetTitle">
+              <div class="budget-block-head">
+                <h3 class="budget-title" id="weekBudgetTitle">This week</h3>
+                <button class="link-btn" id="editWeekBudgetBtn" type="button">Set budget</button>
+              </div>
+
+              <p class="budget-range" id="weekRange"></p>
+
+              <div id="weekBody">
+                <div class="budget-numbers">
+                  <p class="budget-spent" id="weekSpent">—</p>
+                  <p class="budget-of" id="weekLeft"></p>
+                </div>
+                <div class="meter" id="weekMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Weekly budget used">
+                  <span class="meter-fill" id="weekFill"></span>
+                </div>
+                <p class="card-note" id="weekNote"></p>
+              </div>
+
+              <p class="card-note budget-empty-note" id="weekEmptyNote" hidden></p>
+            </section>
           </article>
 
           <article class="card entries-card" aria-labelledby="entriesHeading">
