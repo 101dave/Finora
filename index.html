@@ -6,8 +6,15 @@
   <meta name="description" content="Finora is a quiet personal expense tracker: log income and expenses, set one monthly budget, and see the whole month honestly." />
   <meta name="theme-color" content="#ffffff" />
   <meta name="color-scheme" content="light" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Finora" />
   <title>Finora — personal expense tracker</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230d0d0d'/%3E%3Cpath d='M32 72V28h38v10H44v9h22v10H44v15z' fill='%23ffffff'/%3E%3C/svg%3E" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.json" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -62,6 +69,25 @@
       </div>
 
       <p class="auth-status" id="authStatus" role="status"></p>
+
+      <div class="install-banner" id="pwaInstallBanner" hidden>
+        <div class="install-banner-row">
+          <div class="install-banner-copy">
+            <p class="install-banner-title">Want quicker access?</p>
+            <p class="install-banner-sub">Install Finora on your device for one-tap access.</p>
+          </div>
+          <button type="button" class="btn primary sm install-banner-btn" id="pwaInstallBtn" aria-expanded="false" aria-controls="pwaInstallHint">
+            <svg class="install-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Download App</span>
+          </button>
+        </div>
+        <p class="install-banner-hint" id="pwaInstallHint" role="status" aria-live="polite" hidden></p>
+      </div>
+
       <p class="auth-foot">Finora · a quiet ledger of what comes in and what goes out.</p>
     </div>
   </section>

@@ -5,7 +5,9 @@ import { $, show } from './dom.js';
 import { IS_CONFIGURED } from './config.js';
 import { mountAuth } from './auth.js';
 import { mountDashboard } from './dashboard.js';
+import { mountPwaInstall, registerServiceWorker } from './pwa.js';
 import { createSupabaseStore } from './store/supabase-store.js';
+import { toast } from './toast.js';
 import {
   adoptSessionFromUrl,
   clearAuthParamsFromUrl,
@@ -79,6 +81,11 @@ async function boot() {
 
   startAuth(urlError ? `That sign-in link didn’t work: ${urlError}` : '');
 }
+
+registerServiceWorker();
+mountPwaInstall({
+  onInstalled: () => toast('Finora installed.'),
+});
 
 boot().catch((error) => {
   console.error(error);

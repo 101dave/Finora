@@ -32,6 +32,11 @@ modules, with Supabase for real accounts and real storage.
 - **A category breakdown** — a Chart.js doughnut plus a text legend that carries
   every value, so the canvas is never the only source of information.
 - **Small insights** — largest expense, average per day, days logged.
+- **Installable PWA** — a relative-path web manifest, monochrome icons, a
+  static app-shell service worker (Supabase Auth and PostgREST always go
+  straight to the network), and a “Download App” banner under the sign-in card
+  that triggers `beforeinstallprompt` where supported or shows clear
+  browser-menu instructions elsewhere.
 
 Keyboard: press **n** anywhere outside a field to add an entry. `Esc` closes any
 dialog.
@@ -63,10 +68,14 @@ npm test        # 12 dependency-free unit tests (money, dates, week maths)
 ```
 index.html            markup for both screens and every dialog
 styles.css            black and white, light only, responsive table → cards
+manifest.json         PWA manifest (relative ./ paths for Pages + Vercel)
+sw.js                 static app-shell service worker (never caches Supabase)
+icon-*.png            monochrome 192 / 512 / maskable 512 + apple-touch-icon
 js/
   app.js              picks a screen: auth or dashboard
   config.js           Supabase URL, publishable key, currency, limits
   auth.js             sign-in / create-account screen
+  pwa.js              service-worker registration + Download App banner
   dashboard.js        one month of state: totals, filters, dialogs, chart
   format.js           money, percentages and date helpers (local dates only)
   categories.js       fixed category lists per entry type
