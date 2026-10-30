@@ -229,6 +229,26 @@ export async function signUp(email, password) {
   return { session: null, needsConfirmation: true };
 }
 
+/**
+ * Sends a recovery email. Resolves the same way whether or not the address has
+ * an account, so the form cannot be used to discover who is registered.
+ */
+export async function requestPasswordReset(email) {
+  const redirectTo = `${location.origin}${location.pathname}`;
+  await authRequest(`/recover?redirect_to=${encodeURIComponent(redirectTo)}`, { body: { email } });
+}
+
+/** Sets a new password for the session a recovery link just opened. */
+export async function updatePassword(password) {
+  await apiRequest('/auth/v1/user', { method: 'PUT', body: { password } });
+}
+
+/** True when the page was opened from a password-recovery email. */
+export function isRecoveryLink() {
+  if (!location.hash || location.hash.length < 2) return false;
+  return new URLSearchParams(location.hash.slice(1)).get('type') === 'recovery';
+}
+
 export async function signOut() {
   const token = session?.access_token;
   persistSession(null);

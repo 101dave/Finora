@@ -10,6 +10,7 @@ import {
   adoptSessionFromUrl,
   clearAuthParamsFromUrl,
   getCurrentUser,
+  isRecoveryLink,
   isSignedIn,
   readUrlError,
   signOut,
@@ -39,9 +40,10 @@ async function handleSignOut() {
   location.replace(location.pathname);
 }
 
-function startAuth(message = '') {
+function startAuth(message = '', mode = 'signin') {
   mountAuth({
     initialMessage: message,
+    initialMode: mode,
     onSignedIn: () => location.replace(location.pathname),
   });
   showScreen('auth');
@@ -50,10 +52,17 @@ function startAuth(message = '') {
 async function boot() {
   show($('#loading'), true);
 
-  // Email confirmation links come back with tokens in the hash.
+  // Confirmation and recovery links come back with tokens in the hash.
+  const recovery = isRecoveryLink();
   const adopted = adoptSessionFromUrl();
   const urlError = readUrlError();
   if (adopted || urlError || location.hash) clearAuthParamsFromUrl();
+
+  // A recovery link signs you in just far enough to choose a new password.
+  if (recovery && isSignedIn()) {
+    startAuth('', 'update');
+    return;
+  }
 
   if (!IS_CONFIGURED) {
     startAuth('Finora isn’t connected to Supabase yet. Add your project URL and publishable key to js/config.js.');

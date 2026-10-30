@@ -31,23 +31,33 @@
         <h1 id="authTitle">Welcome back</h1>
         <p class="auth-sub" id="authSub">Sign in to see this month honestly.</p>
 
-        <div class="tabs" role="group" aria-label="Account action">
+        <div class="tabs" id="authTabs" role="group" aria-label="Account action">
           <button type="button" id="tabSignin" aria-pressed="true" aria-controls="authForm" data-mode="signin">Sign in</button>
           <button type="button" id="tabSignup" aria-pressed="false" aria-controls="authForm" data-mode="signup">Create account</button>
         </div>
 
         <form id="authForm" novalidate>
-          <div class="field">
+          <div class="field" id="authEmailField">
             <label for="authEmail">Email</label>
             <input id="authEmail" name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby="authError" />
           </div>
-          <div class="field">
+          <div class="field" id="authPasswordField">
             <label for="authPassword">Password</label>
             <input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="6" aria-describedby="authPasswordHint authError" />
             <p class="hint" id="authPasswordHint">At least 6 characters.</p>
           </div>
+          <div class="field" id="authConfirmField" hidden>
+            <label for="authPasswordConfirm">Confirm new password</label>
+            <input id="authPasswordConfirm" name="confirm" type="password" autocomplete="new-password" required minlength="6" aria-describedby="authError" />
+          </div>
+
           <p class="form-error" id="authError" role="alert"></p>
           <button type="submit" class="btn primary block" id="authSubmit">Sign in</button>
+
+          <div class="auth-links">
+            <button type="button" class="link-btn" id="authForgot">Forgot password?</button>
+            <button type="button" class="link-btn" id="authBack" hidden>Back to sign in</button>
+          </div>
         </form>
       </div>
 
