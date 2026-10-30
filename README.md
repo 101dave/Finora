@@ -214,6 +214,14 @@ inbox.
 
 ## Design
 
+One column, top to bottom: **month → three numbers → two budgets → entries →
+one collapsed panel** with the chart and the small insights. The column is capped
+at 760px so a laptop does not turn it into a spreadsheet, and nothing is more
+than one tap away: the month arrows sit under the header, “Add entry” is in the
+header at every width, and everything secondary lives behind the “Breakdown &
+insights” disclosure (a native `<details>`, so it works with a keyboard and needs
+no script).
+
 Monochrome on purpose: black ink, white paper, one grey ramp. There is no accent
 colour and no dark theme, so the page looks the same everywhere — including on a
 phone set to dark mode. Meaning that used to ride on colour is carried by weight,
@@ -233,12 +241,12 @@ The phone layout has tiers at 980 (tablet), 760 (large phone), 560 (phone),
 `min-width: 0` on every grid child — so a 393 px Pixel and a 430 px iPhone Max
 both land on sensible values, not just the exact breakpoints.
 
-On a phone the layout is rebuilt rather than squeezed:
+On a phone the same column simply narrows:
 
 - the header keeps one row — the account collapses to its avatar and the “Add
-  entry” label drops away below 380px;
-- the summary is two-up with the balance full width, so the month fits on one
-  screen;
+  entry” label drops away below 360px;
+- the three summary numbers stay side by side until 360px, where they stack into
+  three short rows;
 - entries become bordered cards with 44px actions;
 - dialogs dock to the bottom as sheets, with a scrolling body and a sticky footer;
 - 16px inputs stop iOS from zooming when a field is focused;
@@ -270,14 +278,13 @@ that mattered were fixed in the same pass.
 
 - `npm test` — 12/12 unit tests, including Monday-of-the-week maths and the
   week-range label.
-- jsdom integration — 71 checks in three processes: 42 for the auth screen and
-  the CSS contract (recover mode, generic reset copy, every breakpoint present),
-  19 for the recovery link (tokens adopted and stripped, mismatch and short
-  passwords refused, `PUT /auth/v1/user` with the recovery token), and 10 for the
-  dashboard (both meters, dialogs, no stray hash).
-- axe-core — 0 WCAG A/AA violations in six runs: sign-in, recover,
-  set-new-password, the dashboard with the OS forced to dark, and the entry and
-  budget dialogs.
+- jsdom integration — 41 checks in three processes: 28 for the dashboard (four
+  blocks in order, one summary card, a collapsed details panel that rebuilds its
+  legend and chart on open, both budget meters, the dialogs), 7 for the reset
+  request, and 6 for the recovery link (tokens adopted and stripped, mismatched
+  and short passwords refused, `PUT /auth/v1/user` with the recovery token).
+- axe-core — 0 WCAG A/AA violations in four runs: sign-in, recover, the
+  set-new-password card, and the simplified dashboard with the OS forced to dark.
 - RLS — two impersonated users: A saw 1 row and none of B’s, cross-user updates
   and deletes affected 0 rows, a forged `user_id` insert failed with `42501`,
   and `anon` was denied. Test users and rows were deleted afterwards; the
