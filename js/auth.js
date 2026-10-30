@@ -210,10 +210,20 @@ export function mountAuth({ onSignedIn, initialMessage = '', initialMode = 'sign
   });
 
   setMode(initialMode);
+  const offlineNotice = 'You’re offline. Sign in once with an internet connection — after that, Finora works offline.';
   if (initialMessage) setStatus(initialMessage);
+  else if (globalThis.navigator?.onLine === false) setStatus(offlineNotice);
+
   if (!IS_CONFIGURED) {
     setStatus('Finora isn’t connected to Supabase yet. Add your project URL and publishable key to js/config.js.');
   }
+
+  window.addEventListener('offline', () => {
+    if (!statusSlot.textContent) setStatus(offlineNotice);
+  });
+  window.addEventListener('online', () => {
+    if (statusSlot.textContent === offlineNotice) setStatus('');
+  });
 
   return { focusEmail: () => firstField().focus() };
 }

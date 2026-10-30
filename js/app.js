@@ -6,6 +6,7 @@ import { IS_CONFIGURED } from './config.js';
 import { mountAuth } from './auth.js';
 import { mountDashboard } from './dashboard.js';
 import { mountPwaInstall, registerServiceWorker } from './pwa.js';
+import { createOfflineStore } from './store/offline-store.js';
 import { createSupabaseStore } from './store/supabase-store.js';
 import { toast } from './toast.js';
 import {
@@ -27,8 +28,12 @@ function showScreen(name) {
 }
 
 function startCloud(user) {
+  const store = createOfflineStore({
+    remote: createSupabaseStore(),
+    userId: user?.id || user?.email || 'default',
+  });
   dashboard = mountDashboard({
-    store: createSupabaseStore(),
+    store,
     user,
     onSignOut: handleSignOut,
   });

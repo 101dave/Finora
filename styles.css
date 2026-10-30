@@ -594,6 +594,24 @@ details[open] > .details-summary::after { transform: translateY(-50%) rotate(-90
   justify-content: flex-end;
 }
 
+.sync-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface-quiet);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+}
+
 .account { position: relative; }
 .account-btn {
   display: flex;
@@ -1263,6 +1281,7 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
   .auth-shell { padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
 
   .wordmark { font-size: 1.02rem; }
+  .sync-pill { padding: 3px 7px; font-size: 9.5px; letter-spacing: .05em; }
   .account-btn { max-width: 120px; }
   .monthbar h1 { font-size: 1.18rem; }
   .monthbar .icon-btn { width: 38px; height: 38px; }

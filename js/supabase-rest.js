@@ -16,6 +16,32 @@ export class ApiError extends Error {
   }
 }
 
+export function isOfflineError(error) {
+  if (!error) return false;
+  if (error instanceof ApiError) return error.status === 0;
+  return error instanceof TypeError && /fetch|network/i.test(String(error.message || ''));
+}
+
+export function decodeJwtUser(token) {
+  if (typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length < 2) return null;
+
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const bytes = Uint8Array.from(atob(padded), (ch) => ch.charCodeAt(0));
+    const claims = JSON.parse(new TextDecoder().decode(bytes));
+    if (!claims?.sub) return null;
+    return {
+      id: String(claims.sub),
+      email: claims.email ? String(claims.email) : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* session storage                                                     */
 /* ------------------------------------------------------------------ */
@@ -60,8 +86,14 @@ function normalizeSession(payload) {
     refresh_token: payload.refresh_token,
     expires_at: Number(payload.expires_at)
       || Math.floor(Date.now() / 1000) + Number(payload.expires_in || 3600),
-    user: payload.user ?? null,
+    user: payload.user ?? decodeJwtUser(payload.access_token) ?? null,
   };
+}
+
+function cachedSessionUser() {
+  if (!session) return null;
+  if (session.user?.id) return session.user;
+  return decodeJwtUser(session.access_token);
 }
 
 function tokenIsStale() {
@@ -138,6 +170,7 @@ async function apiRequest(path, { method = 'GET', body, headers, retried = false
     try {
       await refreshSession();
     } catch (error) {
+      if (isOfflineError(error)) throw error;
       persistSession(null);
       throw new ApiError('Your session has expired. Please sign in again.', { status: 401 });
     }
@@ -270,6 +303,7 @@ export async function refreshSession() {
     .then((data) => {
       const next = normalizeSession(data);
       if (!next) throw new ApiError('Could not refresh the session.', { status: 401 });
+      if (!next.user && session?.user) next.user = session.user;
       persistSession(next);
       return next;
     })
@@ -280,9 +314,19 @@ export async function refreshSession() {
   return refreshPromise;
 }
 
-/** Confirms the stored token is still accepted by the server. */
+/**
+ * Confirms the stored token is still accepted by the server, or falls back to
+ * the cached session user when the device is offline so the ledger opens
+ * without a network connection.
+ */
 export async function getCurrentUser() {
   if (!session) return null;
+
+  if (globalThis.navigator?.onLine === false) {
+    const offlineUser = cachedSessionUser();
+    if (offlineUser) return offlineUser;
+  }
+
   try {
     if (tokenIsStale()) await refreshSession();
     const user = await apiRequest('/auth/v1/user');
@@ -291,6 +335,12 @@ export async function getCurrentUser() {
     }
     return user;
   } catch (error) {
+    if (isOfflineError(error)) {
+      return cachedSessionUser();
+    }
+    if (error instanceof ApiError && (error.status === 400 || error.status === 401 || error.status === 403)) {
+      persistSession(null);
+    }
     return null;
   }
 }

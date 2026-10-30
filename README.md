@@ -32,11 +32,12 @@ modules, with Supabase for real accounts and real storage.
 - **A category breakdown** — a Chart.js doughnut plus a text legend that carries
   every value, so the canvas is never the only source of information.
 - **Small insights** — largest expense, average per day, days logged.
-- **Installable PWA** — a relative-path web manifest, monochrome icons, a
-  static app-shell service worker (Supabase Auth and PostgREST always go
-  straight to the network), and a “Download App” banner under the sign-in card
-  that triggers `beforeinstallprompt` where supported or shows clear
-  browser-menu instructions elsewhere.
+- **Installable PWA & Offline Mode** — a relative-path web manifest, monochrome
+  icons, a static app-shell service worker (Supabase Auth and PostgREST always
+  go straight to the network), a “Download App” banner under the sign-in card,
+  and a per-user local cache + offline outbox (`js/store/offline-store.js`) so
+  signed-in accounts can open the ledger, log/edit/delete entries, and adjust
+  budgets offline with automatic sync on reconnect.
 
 Keyboard: press **n** anywhere outside a field to add an entry. `Esc` closes any
 dialog.
@@ -84,7 +85,8 @@ js/
   dom.js              tiny DOM helpers (no innerHTML with user data)
   toast.js            one toast at a time, optional action
   store/
-    supabase-store.js the only store: PostgREST behind RLS
+    offline-store.js  per-user local cache + ordered offline sync outbox
+    supabase-store.js PostgREST behind RLS
 vendor/chart.umd.js   Chart.js 4.6.1, vendored so runtime needs no CDN
 supabase/schema.sql   reference DDL for the deployed database
 tests/                node --test, no dependencies
