@@ -354,6 +354,47 @@ select {
   font-size: .84rem;
 }
 
+/* ---------- collapsible details ---------- */
+.details-card { padding: 0; overflow: hidden; }
+.details-summary {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 48px 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+.details-summary::-webkit-details-marker { display: none; }
+@media (hover: hover) {
+  .details-summary:hover { background: var(--surface-quiet); }
+}
+.details-title { font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
+.details-hint { color: var(--ink-2); font-size: .78rem; }
+.details-summary::after {
+  content: "›";
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  color: var(--ink-2);
+  font-size: 1.2rem;
+  line-height: 1;
+  transform: translateY(-50%) rotate(90deg);
+  transition: transform .15s ease;
+}
+details[open] > .details-summary::after { transform: translateY(-50%) rotate(-90deg); }
+.details-body { padding: 4px 20px 20px; border-top: 1px solid var(--line); }
+.details-subhead {
+  margin: 16px 0 10px;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.details-subhead:first-child { margin-top: 12px; }
+
 /* ---------- loading ---------- */
 .loading {
   position: fixed;
@@ -484,7 +525,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px clamp(16px, 4vw, 40px);
+  padding: 14px max(clamp(16px, 4vw, 32px), calc((100% - 760px) / 2));
   border-bottom: 1px solid var(--line);
   background: rgba(255, 255, 255, .92);
   backdrop-filter: blur(10px);
@@ -559,9 +600,9 @@ select {
 .menu button:hover { background: var(--surface-quiet); }
 
 .app-main {
-  max-width: 1180px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 26px clamp(16px, 4vw, 40px) 0;
+  padding: 22px clamp(16px, 4vw, 32px) 0;
 }
 
 .monthbar {
@@ -590,38 +631,37 @@ select {
   text-transform: uppercase;
 }
 
-/* summary */
+/* summary — one card, three numbers */
 .summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 0;
 }
-.summary-card { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.summary-item {
+  min-width: 0;
+  padding: 0 16px;
+  border-left: 1px solid var(--line);
+}
+.summary-item:first-child { padding-left: 0; border-left: 0; }
+.summary-item:last-child { padding-right: 0; }
+.summary-item--balance { border-left: 2px solid var(--ink); }
+.summary-item .microlabel { margin-bottom: 2px; }
 .big-money {
-  margin: 6px 0 0;
-  font-size: clamp(1.45rem, 2.6vw, 1.85rem);
+  margin: 4px 0 0;
+  font-size: clamp(1.2rem, 3.4vw, 1.6rem);
   font-weight: 650;
   letter-spacing: -.025em;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.summary-card--balance { border-color: var(--ink); }
-.summary-card--balance .big-money { color: var(--ink); }
 .big-money.is-negative {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
 
-/* layout */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(290px, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-.column { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* one column, top to bottom */
+.stack { display: flex; flex-direction: column; gap: 14px; }
 
 /* budget */
 .budget-numbers {
@@ -998,27 +1038,12 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
    · 360 very small · short-landscape phones · 320 narrowest
    ============================================================ */
 
-/* ---- tablets and unfolded foldables ---- */
-@media (max-width: 980px) {
-  .layout { grid-template-columns: minmax(0, 1fr); }
-  .column-side {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 16px;
-  }
-}
-
 /* ---- large phones and small tablets ---- */
 @media (max-width: 760px) {
   .app-header { padding-left: 16px; padding-right: 16px; }
   .app-main { padding-left: 16px; padding-right: 16px; }
 
-  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .summary-card--balance { grid-column: 1 / -1; }
-
   .month-note { display: none; }
-  .column-side { grid-template-columns: minmax(0, 1fr); }
 
   .account-email { max-width: 14ch; }
 
@@ -1031,9 +1056,9 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
   select,
   textarea { font-size: 16px; }
 
-  .filters > .field.inline,
   .filters > .segmented { width: 100%; }
-  .filters > .field.grow { flex: 1 1 100%; }
+  .filters > .field.inline { flex: 1 1 42%; min-width: 0; }
+  .filters > .field.grow { flex: 1 1 52%; min-width: 0; }
   .segmented { display: flex; }
   .segmented button { flex: 1; min-height: 40px; }
 
@@ -1110,9 +1135,11 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
   #thisMonthBtn { min-height: 40px; }
 
   .card { padding: 15px 16px; border-radius: 14px; }
-  .summary { gap: 10px; margin-bottom: 12px; }
-  .summary-card { padding: 13px 14px; gap: 1px; }
-  .big-money { font-size: clamp(1.05rem, 4.6vw, 1.22rem); }
+  .summary-item { padding: 0 12px; }
+  .big-money { font-size: clamp(1.02rem, 4.3vw, 1.18rem); }
+  .details-summary { padding: 14px 44px 14px 16px; }
+  .details-summary::after { right: 16px; }
+  .details-body { padding: 4px 16px 16px; }
   .card-note { font-size: .74rem; }
   .microlabel { font-size: 9.5px; letter-spacing: .13em; }
 
@@ -1180,10 +1207,11 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
   #thisMonthBtn { font-size: .8rem; min-height: 38px; }
 
   .card { padding: 14px 13px; }
-  .summary { gap: 8px; }
-  .summary-card { padding: 12px; }
+  .filters > .field.inline,
+  .filters > .field.grow { flex: 1 1 100%; }
+  .summary-item { padding: 0 9px; }
   .microlabel { font-size: 9px; }
-  .big-money { font-size: 1.05rem; }
+  .big-money { font-size: 1rem; }
   .budget-spent { font-size: 1.3rem; }
 
   .auth-card { padding: 18px 14px; }
@@ -1201,9 +1229,11 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
   .account-btn { max-width: 44px; padding: 3px; }
   .account-email { display: none; }
 
-  .summary { grid-template-columns: minmax(0, 1fr); }
-  .summary-card--balance { grid-column: auto; }
-  .big-money { font-size: 1.25rem; }
+  /* three numbers stack into three rows */
+  .summary { grid-template-columns: minmax(0, 1fr); row-gap: 10px; }
+  .summary-item { padding: 0; border-left: 0; }
+  .summary-item + .summary-item { border-top: 1px solid var(--line); padding-top: 10px; }
+  .big-money { font-size: 1.15rem; }
 
   /* title on its own line, then the arrows and the shortcut */
   .monthbar { gap: 6px; }

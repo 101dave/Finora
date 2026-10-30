@@ -97,139 +97,140 @@
         <p class="month-note" id="monthNote"></p>
       </div>
 
-      <section class="summary" aria-label="Month summary">
-        <article class="card summary-card">
-          <p class="microlabel">Income</p>
-          <p class="big-money" id="incomeValue">—</p>
-          <p class="card-note" id="incomeNote"></p>
+      <div class="stack">
+        <section class="card summary" aria-label="Month summary">
+          <div class="summary-item">
+            <p class="microlabel">In</p>
+            <p class="big-money" id="incomeValue">—</p>
+            <p class="card-note" id="incomeNote"></p>
+          </div>
+          <div class="summary-item">
+            <p class="microlabel">Out</p>
+            <p class="big-money" id="expenseValue">—</p>
+            <p class="card-note" id="expenseNote"></p>
+          </div>
+          <div class="summary-item summary-item--balance">
+            <p class="microlabel">Left</p>
+            <p class="big-money" id="balanceValue">—</p>
+            <p class="card-note" id="balanceNote"></p>
+          </div>
+        </section>
+
+
+        <article class="card budget-card" aria-labelledby="budgetHeading">
+          <div class="card-head">
+            <h2 id="budgetHeading">Budgets</h2>
+          </div>
+
+          <section class="budget-block" aria-labelledby="budgetMonthTitle">
+            <div class="budget-block-head">
+              <h3 class="budget-title" id="budgetMonthTitle">This month</h3>
+              <button class="link-btn" id="editBudgetBtn" type="button">Set budget</button>
+            </div>
+
+            <div id="budgetBody">
+              <div class="budget-numbers">
+                <p class="budget-spent" id="budgetSpent">—</p>
+                <p class="budget-of" id="budgetLeft"></p>
+              </div>
+              <div class="meter" id="budgetMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Monthly budget used">
+                <span class="meter-fill" id="budgetFill"></span>
+              </div>
+              <p class="card-note" id="budgetNote"></p>
+            </div>
+
+            <p class="card-note budget-empty-note" id="budgetEmptyNote" hidden></p>
+          </section>
+
+          <section class="budget-block" aria-labelledby="weekBudgetTitle">
+            <div class="budget-block-head">
+              <h3 class="budget-title" id="weekBudgetTitle">This week</h3>
+              <button class="link-btn" id="editWeekBudgetBtn" type="button">Set budget</button>
+            </div>
+
+            <p class="budget-range" id="weekRange"></p>
+
+            <div id="weekBody">
+              <div class="budget-numbers">
+                <p class="budget-spent" id="weekSpent">—</p>
+                <p class="budget-of" id="weekLeft"></p>
+              </div>
+              <div class="meter" id="weekMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Weekly budget used">
+                <span class="meter-fill" id="weekFill"></span>
+              </div>
+              <p class="card-note" id="weekNote"></p>
+            </div>
+
+            <p class="card-note budget-empty-note" id="weekEmptyNote" hidden></p>
+          </section>
         </article>
-        <article class="card summary-card">
-          <p class="microlabel">Expenses</p>
-          <p class="big-money" id="expenseValue">—</p>
-          <p class="card-note" id="expenseNote"></p>
+
+        <article class="card entries-card" aria-labelledby="entriesHeading">
+          <div class="card-head">
+            <h2 id="entriesHeading" tabindex="-1">Entries</h2>
+            <span class="count-pill" id="entriesCount" aria-live="polite">0</span>
+          </div>
+
+          <div class="filters">
+            <div class="segmented" id="typeTabs" role="group" aria-label="Entry type">
+              <button type="button" aria-pressed="true" data-type="all">All</button>
+              <button type="button" aria-pressed="false" data-type="expense">Expenses</button>
+              <button type="button" aria-pressed="false" data-type="income">Income</button>
+            </div>
+            <div class="field inline">
+              <label class="sr-only" for="categoryFilter">Filter by category</label>
+              <select id="categoryFilter"><option value="all">All categories</option></select>
+            </div>
+            <div class="field inline grow">
+              <label class="sr-only" for="searchInput">Search entries</label>
+              <input id="searchInput" type="search" placeholder="Search notes…" autocomplete="off" />
+            </div>
+          </div>
+
+          <p class="alert" id="loadError" role="alert" hidden>
+            <span id="loadErrorText">Could not load this month.</span>
+            <button class="link-btn" id="retryLoadBtn" type="button">Try again</button>
+          </p>
+
+          <div class="table-wrap" id="entriesTableWrap">
+            <table class="entries" role="table">
+              <caption class="sr-only">Entries for the selected month</caption>
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">Date</th>
+                  <th scope="col" role="columnheader">Entry</th>
+                  <th scope="col" role="columnheader">Category</th>
+                  <th scope="col" role="columnheader" class="num">Amount</th>
+                  <th scope="col" role="columnheader"><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="entriesBody" role="rowgroup"></tbody>
+            </table>
+          </div>
+
+          <div class="empty" id="entriesEmpty" hidden>
+            <p class="empty-art" aria-hidden="true">◔</p>
+            <h3>Nothing logged this month</h3>
+            <p>Start with one entry. Small and honest beats complete and late.</p>
+            <button class="btn primary sm" id="entriesEmptyAddBtn" type="button">＋ Add entry</button>
+          </div>
+
+          <div class="empty" id="entriesNoMatch" hidden>
+            <h3>No entries match</h3>
+            <p id="entriesNoMatchText">Try a different search or category.</p>
+            <button class="btn ghost sm" id="clearFiltersBtn" type="button">Clear filters</button>
+          </div>
+
+          <p class="card-note entries-summary" id="entriesSummary"></p>
         </article>
-        <article class="card summary-card summary-card--balance">
-          <p class="microlabel">Balance</p>
-          <p class="big-money" id="balanceValue">—</p>
-          <p class="card-note" id="balanceNote"></p>
-        </article>
-      </section>
+        <details class="card details-card" id="insightPanel">
+          <summary class="details-summary">
+            <span class="details-title">Breakdown &amp; insights</span>
+            <span class="details-hint">Categories, biggest expense, daily average</span>
+          </summary>
 
-      <div class="layout">
-        <div class="column column-main">
-          <article class="card budget-card" aria-labelledby="budgetHeading">
-            <div class="card-head">
-              <h2 id="budgetHeading">Budgets</h2>
-            </div>
-
-            <section class="budget-block" aria-labelledby="budgetMonthTitle">
-              <div class="budget-block-head">
-                <h3 class="budget-title" id="budgetMonthTitle">This month</h3>
-                <button class="link-btn" id="editBudgetBtn" type="button">Set budget</button>
-              </div>
-
-              <div id="budgetBody">
-                <div class="budget-numbers">
-                  <p class="budget-spent" id="budgetSpent">—</p>
-                  <p class="budget-of" id="budgetLeft"></p>
-                </div>
-                <div class="meter" id="budgetMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Monthly budget used">
-                  <span class="meter-fill" id="budgetFill"></span>
-                </div>
-                <p class="card-note" id="budgetNote"></p>
-              </div>
-
-              <p class="card-note budget-empty-note" id="budgetEmptyNote" hidden></p>
-            </section>
-
-            <section class="budget-block" aria-labelledby="weekBudgetTitle">
-              <div class="budget-block-head">
-                <h3 class="budget-title" id="weekBudgetTitle">This week</h3>
-                <button class="link-btn" id="editWeekBudgetBtn" type="button">Set budget</button>
-              </div>
-
-              <p class="budget-range" id="weekRange"></p>
-
-              <div id="weekBody">
-                <div class="budget-numbers">
-                  <p class="budget-spent" id="weekSpent">—</p>
-                  <p class="budget-of" id="weekLeft"></p>
-                </div>
-                <div class="meter" id="weekMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Weekly budget used">
-                  <span class="meter-fill" id="weekFill"></span>
-                </div>
-                <p class="card-note" id="weekNote"></p>
-              </div>
-
-              <p class="card-note budget-empty-note" id="weekEmptyNote" hidden></p>
-            </section>
-          </article>
-
-          <article class="card entries-card" aria-labelledby="entriesHeading">
-            <div class="card-head">
-              <h2 id="entriesHeading" tabindex="-1">Entries</h2>
-              <span class="count-pill" id="entriesCount" aria-live="polite">0</span>
-            </div>
-
-            <div class="filters">
-              <div class="segmented" id="typeTabs" role="group" aria-label="Entry type">
-                <button type="button" aria-pressed="true" data-type="all">All</button>
-                <button type="button" aria-pressed="false" data-type="expense">Expenses</button>
-                <button type="button" aria-pressed="false" data-type="income">Income</button>
-              </div>
-              <div class="field inline">
-                <label class="sr-only" for="categoryFilter">Filter by category</label>
-                <select id="categoryFilter"><option value="all">All categories</option></select>
-              </div>
-              <div class="field inline grow">
-                <label class="sr-only" for="searchInput">Search entries</label>
-                <input id="searchInput" type="search" placeholder="Search notes…" autocomplete="off" />
-              </div>
-            </div>
-
-            <p class="alert" id="loadError" role="alert" hidden>
-              <span id="loadErrorText">Could not load this month.</span>
-              <button class="link-btn" id="retryLoadBtn" type="button">Try again</button>
-            </p>
-
-            <div class="table-wrap" id="entriesTableWrap">
-              <table class="entries" role="table">
-                <caption class="sr-only">Entries for the selected month</caption>
-                <thead role="rowgroup">
-                  <tr role="row">
-                    <th scope="col" role="columnheader">Date</th>
-                    <th scope="col" role="columnheader">Entry</th>
-                    <th scope="col" role="columnheader">Category</th>
-                    <th scope="col" role="columnheader" class="num">Amount</th>
-                    <th scope="col" role="columnheader"><span class="sr-only">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody id="entriesBody" role="rowgroup"></tbody>
-              </table>
-            </div>
-
-            <div class="empty" id="entriesEmpty" hidden>
-              <p class="empty-art" aria-hidden="true">◔</p>
-              <h3>Nothing logged this month</h3>
-              <p>Start with one entry. Small and honest beats complete and late.</p>
-              <button class="btn primary sm" id="entriesEmptyAddBtn" type="button">＋ Add entry</button>
-            </div>
-
-            <div class="empty" id="entriesNoMatch" hidden>
-              <h3>No entries match</h3>
-              <p id="entriesNoMatchText">Try a different search or category.</p>
-              <button class="btn ghost sm" id="clearFiltersBtn" type="button">Clear filters</button>
-            </div>
-
-            <p class="card-note entries-summary" id="entriesSummary"></p>
-          </article>
-        </div>
-
-        <aside class="column column-side">
-          <article class="card breakdown-card" aria-labelledby="breakdownHeading">
-            <div class="card-head">
-              <h2 id="breakdownHeading">Expenses by category</h2>
-            </div>
+          <div class="details-body">
+            <h3 class="details-subhead">By category</h3>
             <div class="donut-wrap" id="donutWrap">
               <canvas id="donut" height="220" aria-hidden="true"></canvas>
               <div class="donut-center">
@@ -239,12 +240,8 @@
             </div>
             <ul class="legend" id="legend"></ul>
             <p class="card-note" id="breakdownEmpty" hidden>No expenses to chart this month.</p>
-          </article>
 
-          <article class="card insights-card" aria-labelledby="insightsHeading">
-            <div class="card-head">
-              <h2 id="insightsHeading">At a glance</h2>
-            </div>
+            <h3 class="details-subhead">At a glance</h3>
             <dl class="insights">
               <div>
                 <dt>Largest expense</dt>
@@ -259,8 +256,8 @@
                 <dd id="insightDays">—</dd>
               </div>
             </dl>
-          </article>
-        </aside>
+          </div>
+        </details>
       </div>
 
       <footer class="app-foot">

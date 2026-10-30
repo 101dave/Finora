@@ -105,6 +105,7 @@ export function mountDashboard({ store, user, onSignOut }) {
 
     donut: $('#donut'),
     donutWrap: $('#donutWrap'),
+    insightPanel: $('#insightPanel'),
     donutTotal: $('#donutTotal'),
     legend: $('#legend'),
     breakdownEmpty: $('#breakdownEmpty'),
@@ -471,6 +472,7 @@ export function mountDashboard({ store, user, onSignOut }) {
     const series = expenseSeries(state.transactions);
     const total = round2(series.reduce((sum, point) => sum + point.value, 0));
     const colors = paletteFor();
+    const panelOpen = !refs.insightPanel || refs.insightPanel.open;
 
     clear(refs.legend);
     show(refs.donutWrap, series.length > 0);
@@ -490,6 +492,13 @@ export function mountDashboard({ store, user, onSignOut }) {
         el('span', { class: 'legend-value', text: formatMoney(point.value) }),
         el('span', { class: 'legend-pct', text: formatPercent(point.value, total) }),
       ]));
+    }
+
+    // The doughnut is only drawn while the panel is open: Chart.js measures its
+    // canvas, and a collapsed one measures zero.
+    if (!panelOpen) {
+      destroyDonut();
+      return;
     }
 
     renderDonut(refs.donut, series);
@@ -933,6 +942,10 @@ export function mountDashboard({ store, user, onSignOut }) {
   }
 
   function start() {
+    refs.insightPanel?.addEventListener('toggle', () => {
+      if (refs.insightPanel.open) renderBreakdown();
+    });
+
     setupAccount();
     setupMonthNavigation();
     setupFilters();
