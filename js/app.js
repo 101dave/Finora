@@ -1,12 +1,11 @@
 /**
- * Bootstrap: pick a screen (auth, dashboard, or demo) and wire the theme.
+ * Bootstrap: pick a screen (auth or dashboard) and wire the theme.
  */
 import { $, show } from './dom.js';
 import { IS_CONFIGURED } from './config.js';
 import { initTheme, toggleTheme } from './theme.js';
 import { mountAuth } from './auth.js';
 import { mountDashboard } from './dashboard.js';
-import { createLocalStore } from './store/local-store.js';
 import { createSupabaseStore } from './store/supabase-store.js';
 import {
   adoptSessionFromUrl,
@@ -16,8 +15,6 @@ import {
   readUrlError,
   signOut,
 } from './supabase-rest.js';
-
-const DEMO = new URLSearchParams(location.search).get('demo') === '1';
 
 let dashboard = null;
 
@@ -33,26 +30,10 @@ function setupThemeButtons() {
   }
 }
 
-function startDemo() {
-  dashboard = mountDashboard({
-    store: createLocalStore(),
-    user: null,
-    demo: true,
-    onSignOut: exitDemo,
-  });
-  showScreen('app');
-  dashboard.start();
-}
-
-function exitDemo() {
-  location.href = location.pathname;
-}
-
 function startCloud(user) {
   dashboard = mountDashboard({
     store: createSupabaseStore(),
     user,
-    demo: false,
     onSignOut: handleSignOut,
   });
   showScreen('app');
@@ -82,11 +63,6 @@ async function boot() {
   const adopted = adoptSessionFromUrl();
   const urlError = readUrlError();
   if (adopted || urlError || location.hash) clearAuthParamsFromUrl();
-
-  if (DEMO) {
-    startDemo();
-    return;
-  }
 
   if (!IS_CONFIGURED) {
     startAuth('Finora isn’t connected to Supabase yet. Add your project URL and publishable key to js/config.js.');
