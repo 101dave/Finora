@@ -118,7 +118,7 @@ export function mountAuth({ onSignedIn, initialMessage = '' } = {}) {
   setMode('signin');
   if (initialMessage) setStatus(initialMessage);
   if (!IS_CONFIGURED) {
-    setStatus('Supabase isn’t configured yet — the demo still works.');
+    setStatus('Finora isn’t connected to Supabase yet. Add your project URL and publishable key to js/config.js.');
   }
 
   return { focusEmail: () => emailInput.focus() };

@@ -1,9 +1,9 @@
 /**
  * The dashboard owns one month of state.
  *
- * It talks to a store with two shapes (Supabase, localStorage) and never knows
- * which one it has. Filters, dialogs, validation, totals and the chart all run
- * the same way in both, which is why the demo is a real app and not a mock.
+ * It reads and writes through a small store interface (loadMonth,
+ * create/update/delete transaction, set/clear budget) and never builds a query
+ * itself — RLS decides which rows exist, this file only decides how they look.
  */
 import { MAX_NOTE_LENGTH } from './config.js';
 import { allCategories, categoriesFor, isKnownCategory, typeLabel } from './categories.js';
@@ -46,7 +46,7 @@ let refs = {};
 let unsubscribeTheme = null;
 let loadToken = 0;
 
-export function mountDashboard({ store, user, demo = false, onSignOut }) {
+export function mountDashboard({ store, user, onSignOut }) {
   refs = {
     monthLabel: $('#monthLabel'),
     monthNote: $('#monthNote'),
@@ -99,12 +99,10 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
     insightAverage: $('#insightAverage'),
     insightDays: $('#insightDays'),
 
-    demoBadge: $('#demoBadge'),
     accountEmail: $('#accountEmail'),
     avatarInitial: $('#avatarInitial'),
     accountBtn: $('#accountBtn'),
     accountMenu: $('#accountMenu'),
-    resetDemo: $('#resetDemoBtn'),
     signOutBtn: $('#signOutBtn'),
     addEntry: $('#addEntryBtn'),
     storageNote: $('#storageNote'),
@@ -229,9 +227,7 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
     renderEntries();
     renderBreakdown();
     renderInsights(totals);
-    setText(refs.storageNote, demo
-      ? 'Sample data · stays in this browser'
-      : 'Stored in Supabase · visible only to you');
+    setText(refs.storageNote, 'Stored in Supabase · visible only to you');
   }
 
   function renderMonthChrome() {
@@ -769,38 +765,13 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
 
     for (const item of $$('button', menu)) item.addEventListener('click', closeMenu);
 
-    if (demo) {
-      show(refs.demoBadge, true);
-      show(refs.resetDemo, true);
-      setText(refs.accountEmail, 'Demo mode');
-      setText(refs.avatarInitial, 'D');
-      setText(refs.signOutBtn, 'Exit demo');
-    } else {
-      const email = user?.email || 'Signed in';
-      setText(refs.accountEmail, email);
-      setText(refs.avatarInitial, (email[0] || 'F').toUpperCase());
-      refs.accountEmail.title = email;
-      setText(refs.signOutBtn, 'Sign out');
-    }
+    const email = user?.email || 'Signed in';
+    setText(refs.accountEmail, email);
+    setText(refs.avatarInitial, (email[0] || 'F').toUpperCase());
+    refs.accountEmail.title = email;
+    setText(refs.signOutBtn, 'Sign out');
 
     refs.signOutBtn.addEventListener('click', () => onSignOut?.());
-
-    refs.resetDemo.addEventListener('click', async () => {
-      const confirmed = await askConfirm({
-        title: 'Reset sample data?',
-        message: 'Your demo edits will be replaced by the original sample months. Real accounts are never touched.',
-        confirmLabel: 'Reset data',
-      });
-      if (!confirmed) return;
-
-      try {
-        await store.resetDemo();
-        await load();
-        toast('Sample data restored.');
-      } catch (error) {
-        toast(humanError(error, 'Could not reset the sample data.'));
-      }
-    });
   }
 
   function goToMonth(monthKey) {

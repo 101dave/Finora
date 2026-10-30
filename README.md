@@ -4,9 +4,9 @@ A quiet personal expense tracker. Log what comes in and what goes out, set one
 monthly budget, and see the whole month honestly.
 
 No framework, no build step, no package to install: plain HTML, CSS and ES
-modules, with Supabase for real accounts and a local demo you can try instantly.
+modules, with Supabase for real accounts and real storage.
 
-- **Demo:** `index.html?demo=1` (sample data, stored in your browser only)
+- **Live:** <https://101dave.github.io/Finora/>
 - **Portfolio:** <https://ebaleallandave.vercel.app/PROJECT-EXPENSE.html>
 
 ---
@@ -25,8 +25,6 @@ modules, with Supabase for real accounts and a local demo you can try instantly.
 - **A category breakdown** — a Chart.js doughnut plus a text legend that carries
   every value, so the canvas is never the only source of information.
 - **Small insights** — largest expense, average per day, days logged.
-- **Demo mode** — the same app, the same filters, dialogs and validation, running
-  against seeded sample data in `localStorage`. It never calls Supabase.
 
 Keyboard: press **n** anywhere outside a field to add an entry. `Esc` closes any
 dialog.
@@ -39,14 +37,16 @@ Any static server works; ES modules will not load from `file://`.
 
 ```bash
 python3 -m http.server 3000 --bind 0.0.0.0
-# open http://localhost:3000           → sign in with a real account
-# open http://localhost:3000/?demo=1   → demo, no account needed
+# open http://localhost:3000 → sign in with a real account
 ```
 
 or `npm run dev` (the same command).
 
+Sample-data mode (`?demo=1`) was removed on request, so the app is real accounts
+only — a visitor needs an account to see the dashboard.
+
 ```bash
-npm test        # 17 dependency-free unit tests (formatting + demo store)
+npm test        # 9 dependency-free unit tests (money, percentages, dates)
 ```
 
 ---
@@ -57,7 +57,7 @@ npm test        # 17 dependency-free unit tests (formatting + demo store)
 index.html            markup for both screens and every dialog
 styles.css            one warm palette, light + dark, responsive table → cards
 js/
-  app.js              picks a screen: auth, dashboard or demo
+  app.js              picks a screen: auth or dashboard
   config.js           Supabase URL, publishable key, currency, limits
   auth.js             sign-in / create-account screen
   dashboard.js        one month of state: totals, filters, dialogs, chart
@@ -69,18 +69,16 @@ js/
   theme.js            system preference, remembered choice
   toast.js            one toast at a time, optional action
   store/
-    supabase-store.js real accounts (RLS does the access control)
-    local-store.js    demo, in localStorage, with rollback on failed writes
+    supabase-store.js the only store: PostgREST behind RLS
 vendor/chart.umd.js   Chart.js 4.6.1, vendored so runtime needs no CDN
 supabase/schema.sql   reference DDL for the deployed database
 tests/                node --test, no dependencies
 ```
 
-The seam that keeps this honest is the store interface. Both implementations
-expose `loadMonth`, `createTransaction`, `updateTransaction`,
-`deleteTransaction`, `setBudget` and `clearBudget`; `dashboard.js` never knows
-which one it is talking to. The demo is therefore not a mock screen — it runs
-the real UI.
+`dashboard.js` reads and writes through one small store object — `loadMonth`,
+`createTransaction`, `updateTransaction`, `deleteTransaction`, `setBudget`,
+`clearBudget` — and never builds a query itself. All filtering, totals and
+formatting happen in the browser on rows the database already agreed to return.
 
 ---
 
@@ -166,8 +164,7 @@ That is the URL the portfolio case study links to.
 
 ### Checklist after deploying
 
-- [ ] `https://your-url/` shows the sign-in screen (not a blank page, not the demo).
-- [ ] `https://your-url/?demo=1` shows the seeded demo with a **Demo** pill.
+- [ ] `https://your-url/` shows the sign-in screen, not a blank page.
 - [ ] Sign up with a real address, open the confirmation email, confirm, sign in.
 - [ ] Add an entry, reload, confirm it is still there.
 - [ ] Set a budget, reload, confirm the meter keeps its value.
@@ -176,21 +173,6 @@ That is the URL the portfolio case study links to.
 
 The email round trip is the one step that cannot be automated from here; it has
 to happen in a browser with a real inbox.
-
----
-
-## The demo
-
-`?demo=1` seeds three months relative to today:
-
-1. the current month, with entries clipped so nothing sits in the future;
-2. the previous month, with a budget set;
-3. the month before that, without a budget.
-
-Everything is editable. State survives a refresh because it lives in
-`localStorage` under `finora.demo.v1`; **Reset sample data** in the account menu
-restores the original seed. The demo never calls Supabase and never uploads
-anything — that trade-off is stated in the UI footer.
 
 ---
 
@@ -230,11 +212,12 @@ that mattered were fixed in the same pass.
 
 **Verified after the fixes**
 
-- `npm test` — 17/17 unit tests.
-- jsdom integration — 38 demo checks, 31 cloud-path checks against a mocked
-  GoTrue/PostgREST, and 8 token-refresh checks.
-- axe-core — 0 WCAG A/AA violations in six runs: demo (light and dark), the auth
-  screen, and the entry, budget and confirm dialogs.
+- `npm test` — 9/9 unit tests.
+- jsdom integration — 25 dashboard checks against a mocked GoTrue/PostgREST and
+  14 markup checks proving `?demo=1` is inert, the sign-in screen renders and the
+  demo plumbing is gone. No request is made on boot.
+- axe-core — 0 WCAG A/AA violations in six runs: the auth screen, the dashboard
+  (light and dark), and the entry, budget and confirm dialogs.
 - RLS — two impersonated users: A saw 1 row and none of B’s, cross-user updates
   and deletes affected 0 rows, a forged `user_id` insert failed with `42501`,
   and `anon` was denied. Test users and rows were deleted afterwards; the
@@ -252,9 +235,9 @@ that mattered were fixed in the same pass.
 - **Password policy is 6 characters with no breach check.** Raise it under
   Authentication → Policies; change `MIN_PASSWORD_LENGTH` in `js/config.js` to
   match what you choose.
-- **No password reset, no CSV export, demo does not sync across tabs** (there is
-  no `storage` listener), and the **email confirmation round trip** still needs a
-  real inbox — it is the one thing that cannot be automated here.
+- **No password reset, no CSV export**, and the **email confirmation round
+  trip** still needs a real inbox — it is the one thing that cannot be automated
+  here.
 
 ## What I'd add next
 

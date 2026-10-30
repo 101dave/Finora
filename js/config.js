@@ -9,7 +9,6 @@ export const SUPABASE_URL = 'https://mexckxbopmgmklusegwo.supabase.co';
 export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_darDcvAXKLgfD-LXY929jQ_4PFpf03t';
 
 export const SESSION_KEY = 'finora.session.v1';
-export const DEMO_STORAGE_KEY = 'finora.demo.v1';
 export const THEME_KEY = 'finora.theme';
 
 export const APP_NAME = 'Finora';
