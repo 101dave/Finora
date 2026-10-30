@@ -147,6 +147,35 @@ export function shiftMonthKey(monthKey, delta) {
   return monthKeyOf(new Date(year, month - 1 + delta, 1));
 }
 
+export function addDays(iso, days) {
+  const date = parseISODate(iso);
+  if (!date) return String(iso);
+  date.setDate(date.getDate() + Number(days || 0));
+  return toISODate(date);
+}
+
+/** Monday of the ISO week that contains `iso` — the key a weekly budget uses. */
+export function weekStartOf(iso = todayISO()) {
+  const date = parseISODate(iso);
+  if (!date) return String(iso);
+  const offset = (date.getDay() + 6) % 7; // Monday = 0 … Sunday = 6
+  date.setDate(date.getDate() - offset);
+  return toISODate(date);
+}
+
+/** `5 – 11 Oct` inside one month, `26 Oct – 1 Nov` when the week straddles two. */
+export function formatDayRange(startISO, endISO) {
+  const start = parseISODate(startISO);
+  const end = parseISODate(endISO);
+  if (!start || !end) return `${startISO} – ${endISO}`;
+
+  const shortMonth = (date) => date.toLocaleDateString('en-PH', { month: 'short' });
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+
+  const startText = sameMonth ? `${start.getDate()}` : `${start.getDate()} ${shortMonth(start)}`;
+  return `${startText} – ${end.getDate()} ${shortMonth(end)}`;
+}
+
 export function monthLabel(monthKey, { short = false } = {}) {
   const date = parseISODate(monthStart(monthKey));
   if (!date) return String(monthKey);

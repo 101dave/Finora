@@ -1,9 +1,8 @@
 /**
- * Bootstrap: pick a screen (auth or dashboard) and wire the theme.
+ * Bootstrap: pick a screen (auth or dashboard).
  */
 import { $, show } from './dom.js';
 import { IS_CONFIGURED } from './config.js';
-import { initTheme, toggleTheme } from './theme.js';
 import { mountAuth } from './auth.js';
 import { mountDashboard } from './dashboard.js';
 import { createSupabaseStore } from './store/supabase-store.js';
@@ -22,12 +21,6 @@ function showScreen(name) {
   show($('#loading'), false);
   show($('#authScreen'), name === 'auth');
   show($('#appScreen'), name === 'app');
-}
-
-function setupThemeButtons() {
-  for (const button of document.querySelectorAll('#themeBtn, #authThemeBtn')) {
-    button.addEventListener('click', () => toggleTheme());
-  }
 }
 
 function startCloud(user) {
@@ -55,8 +48,6 @@ function startAuth(message = '') {
 }
 
 async function boot() {
-  initTheme();
-  setupThemeButtons();
   show($('#loading'), true);
 
   // Email confirmation links come back with tokens in the hash.

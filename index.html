@@ -2,23 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="description" content="Finora is a quiet personal expense tracker: log income and expenses, set one monthly budget, and see the whole month honestly." />
-  <meta name="theme-color" content="#f7f4ee" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="color-scheme" content="light" />
   <title>Finora — personal expense tracker</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23a1542b'/%3E%3Cpath d='M32 72V28h38v10H44v9h22v10H44v15z' fill='%23fffaf3'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230d0d0d'/%3E%3Cpath d='M32 72V28h38v10H44v9h22v10H44v15z' fill='%23ffffff'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="./styles.css" />
-  <script>
-    // Apply a remembered theme before first paint so the page never flashes.
-    (function () {
-      try {
-        var stored = localStorage.getItem('finora.theme');
-        var theme = (stored === 'light' || stored === 'dark') ? stored
-          : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.dataset.theme = theme;
-      } catch (error) { /* storage blocked — the stylesheet falls back to light */ }
-    })();
-  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -34,9 +24,6 @@
     <div class="auth-shell">
       <header class="auth-top">
         <span class="wordmark">Finora<span class="wordmark-dot">.</span></span>
-        <button class="icon-btn" id="authThemeBtn" type="button" aria-label="Switch colour theme" title="Switch colour theme">
-          <span id="authThemeIcon" aria-hidden="true">◐</span>
-        </button>
       </header>
 
       <div class="auth-card">
@@ -75,10 +62,6 @@
       <a class="wordmark" href="./" aria-label="Finora home">Finora<span class="wordmark-dot">.</span></a>
 
       <div class="header-right">
-        <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme" title="Switch colour theme">
-          <span id="themeIcon" aria-hidden="true">◐</span>
-        </button>
-
         <div class="account">
           <button class="account-btn" id="accountBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu">
             <span class="avatar" id="avatarInitial" aria-hidden="true">F</span>
@@ -90,7 +73,7 @@
         </div>
 
         <button class="btn primary" id="addEntryBtn" type="button">
-          <span aria-hidden="true">＋</span> Add entry
+          <span aria-hidden="true">＋</span> <span class="btn-label">Add entry</span>
         </button>
       </div>
     </header>
@@ -126,25 +109,50 @@
         <div class="column column-main">
           <article class="card budget-card" aria-labelledby="budgetHeading">
             <div class="card-head">
-              <h2 id="budgetHeading">Monthly budget</h2>
-              <button class="link-btn" id="editBudgetBtn" type="button">Set budget</button>
+              <h2 id="budgetHeading">Budgets</h2>
             </div>
 
-            <div id="budgetBody">
-              <div class="budget-numbers">
-                <p class="budget-spent" id="budgetSpent">—</p>
-                <p class="budget-of" id="budgetLeft"></p>
+            <section class="budget-block" aria-labelledby="budgetMonthTitle">
+              <div class="budget-block-head">
+                <h3 class="budget-title" id="budgetMonthTitle">This month</h3>
+                <button class="link-btn" id="editBudgetBtn" type="button">Set budget</button>
               </div>
-              <div class="meter" id="budgetMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Budget used">
-                <span class="meter-fill" id="budgetFill"></span>
-              </div>
-              <p class="card-note" id="budgetNote"></p>
-            </div>
 
-            <div class="budget-empty" id="budgetEmpty" hidden>
-              <p>No budget for this month yet. One number, and the bar does the worrying for you.</p>
-              <button class="btn ghost sm" id="budgetEmptyBtn" type="button">Set a budget</button>
-            </div>
+              <div id="budgetBody">
+                <div class="budget-numbers">
+                  <p class="budget-spent" id="budgetSpent">—</p>
+                  <p class="budget-of" id="budgetLeft"></p>
+                </div>
+                <div class="meter" id="budgetMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Monthly budget used">
+                  <span class="meter-fill" id="budgetFill"></span>
+                </div>
+                <p class="card-note" id="budgetNote"></p>
+              </div>
+
+              <p class="card-note budget-empty-note" id="budgetEmptyNote" hidden></p>
+            </section>
+
+            <section class="budget-block" aria-labelledby="weekBudgetTitle">
+              <div class="budget-block-head">
+                <h3 class="budget-title" id="weekBudgetTitle">This week</h3>
+                <button class="link-btn" id="editWeekBudgetBtn" type="button">Set budget</button>
+              </div>
+
+              <p class="budget-range" id="weekRange"></p>
+
+              <div id="weekBody">
+                <div class="budget-numbers">
+                  <p class="budget-spent" id="weekSpent">—</p>
+                  <p class="budget-of" id="weekLeft"></p>
+                </div>
+                <div class="meter" id="weekMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Weekly budget used">
+                  <span class="meter-fill" id="weekFill"></span>
+                </div>
+                <p class="card-note" id="weekNote"></p>
+              </div>
+
+              <p class="card-note budget-empty-note" id="weekEmptyNote" hidden></p>
+            </section>
           </article>
 
           <article class="card entries-card" aria-labelledby="entriesHeading">

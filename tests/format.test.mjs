@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  addDays,
   daysInMonth,
+  formatDayRange,
   elapsedDays,
   formatEntryDate,
   formatMoney,
@@ -18,6 +20,7 @@ import {
   round2,
   shiftMonthKey,
   todayISO,
+  weekStartOf,
 } from '../js/format.js';
 
 const plain = (value) => String(value).replace(/\u00a0/g, ' ');
@@ -96,4 +99,25 @@ test('small helpers keep their promises', () => {
   assert.equal(round2(0.1 + 0.2), 0.3);
   assert.equal(pluralize(1, 'entry', 'entries'), 'entry');
   assert.equal(pluralize(0, 'entry', 'entries'), 'entries');
+});
+
+test('weekStartOf lands on Monday, whichever day you start from', () => {
+  // 2026-10-30 is a Friday; its ISO week starts Monday 26 October.
+  assert.equal(weekStartOf('2026-10-30'), '2026-10-26');
+  assert.equal(weekStartOf('2026-10-26'), '2026-10-26'); // Monday itself
+  assert.equal(weekStartOf('2026-11-01'), '2026-10-26'); // Sunday belongs to that week
+  assert.equal(weekStartOf('2026-11-02'), '2026-11-02'); // next Monday
+});
+
+test('addDays crosses month and year boundaries in local time', () => {
+  assert.equal(addDays('2026-10-26', 6), '2026-11-01');
+  assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(addDays('2026-03-01', -1), '2026-02-28');
+});
+
+test('formatDayRange names the month once, or twice across a boundary', () => {
+  const within = formatDayRange('2026-10-05', '2026-10-11').replace(/\u00a0/g, ' ');
+  assert.equal(within, '5 – 11 Oct');
+  const across = formatDayRange('2026-10-26', '2026-11-01').replace(/\u00a0/g, ' ');
+  assert.equal(across, '26 Oct – 1 Nov');
 });
