@@ -99,7 +99,8 @@ with cascade), `type` (`income`/`expense`), `amount` `numeric(12,2)`, `category`
 bad types, notes over 200 characters and dates outside 2000–2100.
 
 `budgets` — primary key `(user_id, month)`, one budget per month, `month` pinned
-to the first of the month, `amount numeric(12,2)`.
+to the first of the month, `amount numeric(12,2)` above zero (removing a budget
+deletes the row rather than storing 0).
 
 Both tables have `updated_at` triggers, and an index on
 `(user_id, occurred_on desc, created_at desc)` for the only listing query the
@@ -112,6 +113,12 @@ Four policies per table (select / insert / update / delete), all
 privileges on either table. The frontend never filters by user id in its
 queries — the policies do that — so a manipulated request cannot widen its own
 access.
+
+Supabase's default privileges hand `authenticated` **every** privilege on new
+tables, `TRUNCATE` included, and `TRUNCATE` is not filtered by RLS. The project
+therefore revokes `truncate, references, trigger, maintain` from `anon` and
+`authenticated`, keeping only the four verbs the app uses. `verify-access.sql`
+holds the inspection queries and the impersonation recipe used to prove this.
 
 `schema.sql` is the deployed shape, written to be re-runnable (it will not drop
 your data). Apply it with the Supabase SQL editor or `psql` if you ever rebuild
@@ -201,6 +208,53 @@ anything — that trade-off is stated in the UI footer.
 - `prefers-reduced-motion` turns off transitions and chart animation.
 
 ---
+
+## Audit — October 2026
+
+Everything below was checked against the code and the live project. The findings
+that mattered were fixed in the same pass.
+
+| Finding | Severity | Status |
+| --- | --- | --- |
+| The month arrows had no click handlers — you could never leave the current month | high | fixed |
+| `authenticated` held `TRUNCATE` on both tables, which bypasses RLS | medium | revoked |
+| A slow month request could overwrite the month you had just switched to | medium | fixed (request token) |
+| `schema.sql` named the index differently from the deployed one, so re-running it would duplicate it | medium | fixed |
+| `.badge` and avatar text were 4.35:1 on their background in the light theme | medium | fixed (now 4.9:1) |
+| Filter and auth toggles used `role="tablist"` with no tab panels | low | fixed (`aria-pressed` group) |
+| On mobile, `display:none` on `<thead>` dropped the headers from the accessibility tree | low | fixed (visually hidden + explicit roles) |
+| Deleting from the edit dialog closed it before you confirmed | low | fixed |
+| `?error_description=` stayed in the address bar after a failed sign-in link | low | fixed |
+| A very large amount could widen a summary card | low | fixed |
+| The reference schema allowed a 0 budget while the UI refused it | low | fixed (both above zero) |
+
+**Verified after the fixes**
+
+- `npm test` — 17/17 unit tests.
+- jsdom integration — 38 demo checks, 31 cloud-path checks against a mocked
+  GoTrue/PostgREST, and 8 token-refresh checks.
+- axe-core — 0 WCAG A/AA violations in six runs: demo (light and dark), the auth
+  screen, and the entry, budget and confirm dialogs.
+- RLS — two impersonated users: A saw 1 row and none of B’s, cross-user updates
+  and deletes affected 0 rows, a forged `user_id` insert failed with `42501`,
+  and `anon` was denied. Test users and rows were deleted afterwards; the
+  database is back to 0 rows.
+
+**Still open (deliberately, or needs you)**
+
+- **No Content-Security-Policy.** Adding one means moving the small inline theme
+  script into its own file so `script-src 'self'` is possible, plus
+  `connect-src 'self' https://*.supabase.co`. Worth doing before this is widely
+  shared; skipped here because it cannot be verified without a real browser.
+- **Default Supabase SMTP** is rate limited (2 emails/hour) and intended for
+  testing. Configure custom SMTP before inviting anyone, or confirmation emails
+  will silently fail.
+- **Password policy is 6 characters with no breach check.** Raise it under
+  Authentication → Policies; change `MIN_PASSWORD_LENGTH` in `js/config.js` to
+  match what you choose.
+- **No password reset, no CSV export, demo does not sync across tabs** (there is
+  no `storage` listener), and the **email confirmation round trip** still needs a
+  real inbox — it is the one thing that cannot be automated here.
 
 ## What I'd add next
 

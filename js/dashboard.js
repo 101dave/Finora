@@ -44,6 +44,7 @@ const state = {
 
 let refs = {};
 let unsubscribeTheme = null;
+let loadToken = 0;
 
 export function mountDashboard({ store, user, demo = false, onSignOut }) {
   refs = {
@@ -81,6 +82,7 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
     entriesNoMatchText: $('#entriesNoMatchText'),
     clearFilters: $('#clearFiltersBtn'),
     entriesSummary: $('#entriesSummary'),
+    entriesHeading: $('#entriesHeading'),
     entriesEmptyAdd: $('#entriesEmptyAddBtn'),
 
     loadError: $('#loadError'),
@@ -186,24 +188,31 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
   }
 
   async function load() {
+    const token = ++loadToken;
+    const monthKey = state.month;
+
     state.loading = true;
     show(refs.loadError, false);
     renderMonthChrome();
 
     try {
-      const data = await store.loadMonth(state.month);
+      const data = await store.loadMonth(monthKey);
+      if (token !== loadToken) return; // a newer month took over while this was in flight
       state.transactions = data.transactions ?? [];
       state.budget = typeof data.budget === 'number' ? data.budget : null;
       state.error = null;
     } catch (error) {
+      if (token !== loadToken) return;
       state.error = error;
       state.transactions = [];
       state.budget = null;
       setText(refs.loadErrorText, humanError(error, 'Could not load this month.'));
       show(refs.loadError, true);
     } finally {
-      state.loading = false;
-      render();
+      if (token === loadToken) {
+        state.loading = false;
+        render();
+      }
     }
   }
 
@@ -311,7 +320,7 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
     const isIncome = entry.type === 'income';
     const title = entry.note || entry.category;
 
-    const dateCell = el('td', { class: 'date-cell' }, [
+    const dateCell = el('td', { class: 'date-cell', role: 'cell' }, [
       el('time', {
         datetime: entry.occurred_on,
         title: formatFullDate(entry.occurred_on),
@@ -319,21 +328,22 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
       }),
     ]);
 
-    const entryCell = el('td', { class: 'entry-main' }, [
+    const entryCell = el('td', { class: 'entry-main', role: 'cell' }, [
       el('span', { class: 'entry-title', text: title }),
       el('span', { class: 'entry-sub', text: typeLabel(entry.type) }),
     ]);
 
-    const categoryCell = el('td', { class: 'chip-cell' }, [
+    const categoryCell = el('td', { class: 'chip-cell', role: 'cell' }, [
       el('span', { class: 'chip', text: entry.category }),
     ]);
 
     const amountCell = el('td', {
       class: `num ${isIncome ? 'amount-income' : 'amount-expense'}`,
+      role: 'cell',
       text: formatSignedMoney(entry.amount, entry.type),
     });
 
-    const actionsCell = el('td', { class: 'actions-cell' }, [
+    const actionsCell = el('td', { class: 'actions-cell', role: 'cell' }, [
       el('div', { class: 'row-actions' }, [
         el('button', {
           type: 'button',
@@ -352,7 +362,7 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
       ]),
     ]);
 
-    return el('tr', {}, [dateCell, entryCell, categoryCell, amountCell, actionsCell]);
+    return el('tr', { role: 'row' }, [dateCell, entryCell, categoryCell, amountCell, actionsCell]);
   }
 
   function renderEntries() {
@@ -591,9 +601,18 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
   async function handleDialogDelete() {
     const entry = state.editing;
     if (!entry) return;
+
+    // Keep the entry dialog open, so cancelling leaves the person where they were.
+    const confirmed = await askConfirm({
+      title: 'Delete this entry?',
+      message: `${formatMoney(entry.amount)} · ${entry.note || entry.category} on ${formatFullDate(entry.occurred_on)}. This cannot be undone.`,
+      confirmLabel: 'Delete entry',
+    });
+    if (!confirmed) return;
+
     closeDialog(refs.entryDialog);
     state.editing = null;
-    await removeEntry(entry);
+    await deleteEntry(entry);
   }
 
   /* ---------------------------------------------------------------- */
@@ -701,11 +720,15 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
       confirmLabel: 'Delete entry',
     });
     if (!confirmed) return;
+    await deleteEntry(entry);
+  }
 
+  async function deleteEntry(entry) {
     try {
       await store.deleteTransaction(entry.id);
       await load();
       toast('Entry deleted.');
+      refs.entriesHeading.focus(); // the row that had focus is gone
     } catch (error) {
       toast(humanError(error, 'Could not delete that entry.'));
     }
@@ -780,13 +803,25 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
     });
   }
 
+  function goToMonth(monthKey) {
+    if (!monthKey || monthKey === state.month) return;
+    state.month = monthKey;
+    load();
+  }
+
+  function setupMonthNavigation() {
+    refs.prevMonth.addEventListener('click', () => goToMonth(shiftMonthKey(state.month, -1)));
+    refs.nextMonth.addEventListener('click', () => goToMonth(shiftMonthKey(state.month, 1)));
+    refs.thisMonth.addEventListener('click', () => goToMonth(currentMonthKey()));
+  }
+
   function setupFilters() {
     refs.typeTabs.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-type]');
       if (!button) return;
       state.filters.type = button.dataset.type;
       for (const tab of $$('button[data-type]', refs.typeTabs)) {
-        tab.setAttribute('aria-selected', String(tab === button));
+        tab.setAttribute('aria-pressed', String(tab === button));
       }
       renderEntries();
     });
@@ -806,7 +841,7 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
       refs.searchInput.value = '';
       refs.categoryFilter.value = 'all';
       for (const tab of $$('button[data-type]', refs.typeTabs)) {
-        tab.setAttribute('aria-selected', String(tab.dataset.type === 'all'));
+        tab.setAttribute('aria-pressed', String(tab.dataset.type === 'all'));
       }
       renderEntries();
       refs.searchInput.focus();
@@ -852,6 +887,7 @@ export function mountDashboard({ store, user, demo = false, onSignOut }) {
 
   function start() {
     setupAccount();
+    setupMonthNavigation();
     setupFilters();
     setupDialogs();
     load();

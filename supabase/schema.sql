@@ -7,6 +7,10 @@
 -- Money is numeric(12,2). Dates are real `date` values. A user owns their rows
 -- through `user_id`, defaulted to auth.uid(), and RLS — not the client — is
 -- what restricts access.
+--
+-- Note for future tables: default privileges in `public` grant anon and
+-- authenticated ALL. Any new table needs the same explicit revokes below, or it
+-- will be readable by the whole internet before a policy is written.
 
 create extension if not exists pgcrypto;
 
@@ -41,14 +45,16 @@ create table if not exists public.transactions (
 create table if not exists public.budgets (
   user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
   month      date not null check (month = date_trunc('month', month)::date),
-  amount     numeric(12,2) not null check (amount >= 0 and amount <= 999999999.99),
+  amount     numeric(12,2) not null check (amount > 0 and amount <= 999999999.99),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, month)
 );
 
 -- One index for the only listing query the app makes: this user, one month.
-create index if not exists transactions_user_month_idx
+-- Name matches the deployed index; keeping it identical means re-running this
+-- file cannot leave a duplicate index behind.
+create index if not exists transactions_user_date_idx
   on public.transactions (user_id, occurred_on desc, created_at desc);
 
 -- ---------------------------------------------------------------------------
@@ -74,6 +80,15 @@ alter table public.budgets enable row level security;
 -- and an unauthenticated request cannot even reach a policy.
 revoke all on public.transactions from anon;
 revoke all on public.budgets from anon;
+
+-- Supabase's default privileges hand anon and authenticated ALL on every new
+-- table in public. TRUNCATE is the dangerous one: it is not filtered by RLS, so
+-- a signed-in user with that grant could empty every account's rows. The app
+-- only ever needs SELECT / INSERT / UPDATE / DELETE, so take the rest back.
+revoke truncate, references, trigger, maintain
+  on public.transactions, public.budgets
+  from anon, authenticated;
+
 grant select, insert, update, delete on public.transactions to authenticated;
 grant select, insert, update, delete on public.budgets to authenticated;
 

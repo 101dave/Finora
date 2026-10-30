@@ -10,7 +10,7 @@ import { createLocalStore } from './store/local-store.js';
 import { createSupabaseStore } from './store/supabase-store.js';
 import {
   adoptSessionFromUrl,
-  clearSessionFromUrl,
+  clearAuthParamsFromUrl,
   getCurrentUser,
   isSignedIn,
   readUrlError,
@@ -81,7 +81,7 @@ async function boot() {
   // Email confirmation links come back with tokens in the hash.
   const adopted = adoptSessionFromUrl();
   const urlError = readUrlError();
-  if (adopted || location.hash) clearSessionFromUrl();
+  if (adopted || urlError || location.hash) clearAuthParamsFromUrl();
 
   if (DEMO) {
     startDemo();
