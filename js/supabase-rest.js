@@ -186,9 +186,24 @@ export function readUrlError() {
   return raw ? decodeURIComponent(raw.replace(/\+/g, ' ')) : null;
 }
 
-export function clearSessionFromUrl() {
-  if (!location.hash) return;
-  history.replaceState(null, '', `${location.pathname}${location.search}`);
+/** Drops session tokens (and any auth error message) from the address bar. */
+export function clearAuthParamsFromUrl() {
+  const url = new URL(location.href);
+  let changed = false;
+
+  if (url.hash) {
+    url.hash = '';
+    changed = true;
+  }
+
+  for (const key of ['error', 'error_code', 'error_description']) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+
+  if (changed) history.replaceState(null, '', `${url.pathname}${url.search}`);
 }
 
 export async function signIn(email, password) {

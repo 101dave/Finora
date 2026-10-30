@@ -14,7 +14,7 @@ export function mountAuth({ onSignedIn, initialMessage = '' } = {}) {
   const submitButton = $('#authSubmit');
   const title = $('#authTitle');
   const subtitle = $('#authSub');
-  const tabs = $$('.tabs [role="tab"]');
+  const tabs = $$('.tabs [data-mode]');
 
   let mode = 'signin';
 
@@ -40,9 +40,7 @@ export function mountAuth({ onSignedIn, initialMessage = '' } = {}) {
   function setMode(next) {
     mode = next;
     for (const tab of tabs) {
-      const active = tab.dataset.mode === mode;
-      tab.setAttribute('aria-selected', String(active));
-      tab.tabIndex = active ? 0 : -1;
+      tab.setAttribute('aria-pressed', String(tab.dataset.mode === mode));
     }
     title.textContent = mode === 'signin' ? 'Welcome back' : 'Create your account';
     subtitle.textContent = mode === 'signin'
@@ -59,17 +57,6 @@ export function mountAuth({ onSignedIn, initialMessage = '' } = {}) {
       if (tab.dataset.mode === mode) return;
       setMode(tab.dataset.mode);
       emailInput.focus();
-    });
-  }
-
-  // Left/right arrows move between the two tabs, as tablists should.
-  for (const tab of tabs) {
-    tab.addEventListener('keydown', (event) => {
-      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-      event.preventDefault();
-      const next = tab.dataset.mode === 'signin' ? 'signup' : 'signin';
-      setMode(next);
-      $(`#tab${next === 'signin' ? 'Signin' : 'Signup'}`).focus();
     });
   }
 

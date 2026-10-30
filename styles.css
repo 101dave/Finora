@@ -280,7 +280,7 @@ select {
   font-size: .82rem;
   cursor: pointer;
 }
-.segmented button[aria-selected="true"] {
+.segmented button[aria-pressed="true"] {
   background: var(--surface);
   color: var(--ink);
   font-weight: 600;
@@ -355,7 +355,7 @@ select {
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: .13em;
@@ -443,7 +443,7 @@ select {
   border-radius: 10px;
   background: var(--surface-quiet);
 }
-.tabs [role="tab"] {
+.tabs [data-mode] {
   flex: 1;
   padding: 8px 10px;
   border: 0;
@@ -455,7 +455,7 @@ select {
   font-weight: 600;
   cursor: pointer;
 }
-.tabs [role="tab"][aria-selected="true"] {
+.tabs [data-mode][aria-pressed="true"] {
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(48, 36, 24, .1);
@@ -560,7 +560,7 @@ select {
   width: 28px; height: 28px;
   border-radius: 50%;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   font-size: .78rem;
   font-weight: 700;
   flex: none;
@@ -639,6 +639,7 @@ select {
   font-weight: 650;
   letter-spacing: -.025em;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .summary-card--balance { border-color: color-mix(in srgb, var(--accent) 28%, var(--line)); }
 .summary-card--balance .big-money { color: var(--ink); }
@@ -1025,8 +1026,16 @@ table.entries tbody tr:hover { background: var(--surface-quiet); }
   .segmented { display: flex; }
   .segmented button { flex: 1; }
 
-  /* table becomes labelled cards */
-  table.entries thead { display: none; }
+  /* table becomes labelled cards, but the header row stays in the
+     accessibility tree so role="table" keeps its column associations */
+  table.entries thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   table.entries,
   table.entries tbody { display: block; width: 100%; }
   table.entries tbody tr {

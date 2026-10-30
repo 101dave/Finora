@@ -44,9 +44,9 @@
         <h1 id="authTitle">Welcome back</h1>
         <p class="auth-sub" id="authSub">Sign in to see this month honestly.</p>
 
-        <div class="tabs" role="tablist" aria-label="Account action">
-          <button type="button" role="tab" id="tabSignin" aria-selected="true" aria-controls="authForm" data-mode="signin">Sign in</button>
-          <button type="button" role="tab" id="tabSignup" aria-selected="false" aria-controls="authForm" data-mode="signup">Create account</button>
+        <div class="tabs" role="group" aria-label="Account action">
+          <button type="button" id="tabSignin" aria-pressed="true" aria-controls="authForm" data-mode="signin">Sign in</button>
+          <button type="button" id="tabSignup" aria-pressed="false" aria-controls="authForm" data-mode="signup">Create account</button>
         </div>
 
         <form id="authForm" novalidate>
@@ -156,15 +156,15 @@
 
           <article class="card entries-card" aria-labelledby="entriesHeading">
             <div class="card-head">
-              <h2 id="entriesHeading">Entries</h2>
+              <h2 id="entriesHeading" tabindex="-1">Entries</h2>
               <span class="count-pill" id="entriesCount" aria-live="polite">0</span>
             </div>
 
             <div class="filters">
-              <div class="segmented" id="typeTabs" role="tablist" aria-label="Entry type">
-                <button type="button" role="tab" aria-selected="true" data-type="all">All</button>
-                <button type="button" role="tab" aria-selected="false" data-type="expense">Expenses</button>
-                <button type="button" role="tab" aria-selected="false" data-type="income">Income</button>
+              <div class="segmented" id="typeTabs" role="group" aria-label="Entry type">
+                <button type="button" aria-pressed="true" data-type="all">All</button>
+                <button type="button" aria-pressed="false" data-type="expense">Expenses</button>
+                <button type="button" aria-pressed="false" data-type="income">Income</button>
               </div>
               <div class="field inline">
                 <label class="sr-only" for="categoryFilter">Filter by category</label>
@@ -182,18 +182,18 @@
             </p>
 
             <div class="table-wrap" id="entriesTableWrap">
-              <table class="entries">
+              <table class="entries" role="table">
                 <caption class="sr-only">Entries for the selected month</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Entry</th>
-                    <th scope="col">Category</th>
-                    <th scope="col" class="num">Amount</th>
-                    <th scope="col"><span class="sr-only">Actions</span></th>
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th scope="col" role="columnheader">Date</th>
+                    <th scope="col" role="columnheader">Entry</th>
+                    <th scope="col" role="columnheader">Category</th>
+                    <th scope="col" role="columnheader" class="num">Amount</th>
+                    <th scope="col" role="columnheader"><span class="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody id="entriesBody"></tbody>
+                <tbody id="entriesBody" role="rowgroup"></tbody>
               </table>
             </div>
 
