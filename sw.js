@@ -2,12 +2,13 @@
  * Finora — static app-shell service worker.
  *
  * Caches only the static frontend shell so Finora is installable and opens
- * reliably on slow or offline connections. Supabase Auth (/auth/v1) and
- * PostgREST (/rest/v1) requests always go straight to the network and are
- * never cached here.
+ * reliably offline or on weak connections. Supabase Auth (/auth/v1) and
+ * PostgREST (/rest/v1) requests always go straight to the network; offline
+ * data caching and write queueing live in js/store/offline-store.js.
  */
 
-const CACHE_NAME = 'finora-shell-v1';
+const CACHE_NAME = 'finora-shell-v2';
+const NETWORK_TIMEOUT_MS = 3500;
 
 const APP_SHELL = [
   './',
@@ -30,6 +31,7 @@ const APP_SHELL = [
   './js/pwa.js',
   './js/supabase-rest.js',
   './js/toast.js',
+  './js/store/offline-store.js',
   './js/store/supabase-store.js',
 ];
 
@@ -54,6 +56,33 @@ async function cleanRedirectedResponse(response) {
     statusText: response.statusText,
     headers: response.headers,
   });
+}
+
+async function matchFallback(request, isNavigation) {
+  const direct = await caches.match(request, { ignoreSearch: isNavigation });
+  if (direct) return direct;
+
+  if (isNavigation) {
+    const rootFallback = await caches.match(new URL('./', self.location.href).href);
+    if (rootFallback) return rootFallback;
+    const indexFallback = await caches.match(new URL('./index.html', self.location.href).href);
+    if (indexFallback) return indexFallback;
+  }
+
+  return null;
+}
+
+async function fetchWithTimeout(request, timeoutMs) {
+  if (typeof AbortController !== 'function' || !timeoutMs) {
+    return fetch(request);
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function precacheShell() {
@@ -97,8 +126,13 @@ self.addEventListener('fetch', (event) => {
   if (!isNavigation && !isShellAsset) return;
 
   event.respondWith((async () => {
+    const cached = await matchFallback(request, isNavigation);
+
     try {
-      const response = await fetch(request);
+      const response = await fetchWithTimeout(
+        request,
+        cached ? NETWORK_TIMEOUT_MS : 0,
+      );
       if (response && response.status === 200 && response.type === 'basic') {
         const clean = await cleanRedirectedResponse(response);
         if (isShellAsset) {
@@ -110,17 +144,19 @@ self.addEventListener('fetch', (event) => {
       }
       return response;
     } catch {
-      const cached = await caches.match(request, { ignoreSearch: isNavigation });
       if (cached) return cached;
-
-      if (isNavigation) {
-        const rootFallback = await caches.match(new URL('./', self.location.href).href);
-        if (rootFallback) return rootFallback;
-        const indexFallback = await caches.match(new URL('./index.html', self.location.href).href);
-        if (indexFallback) return indexFallback;
-      }
-
       return new Response('Offline', { status: 503, statusText: 'Offline' });
     }
   })());
+});
+
+self.addEventListener('sync', (event) => {
+  if (event.tag !== 'finora-sync') return;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      for (const client of clients) {
+        client.postMessage({ type: 'SYNC_NOW' });
+      }
+    }),
+  );
 });

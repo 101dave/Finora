@@ -119,6 +119,7 @@ export function mountDashboard({ store, user, onSignOut }) {
     accountBtn: $('#accountBtn'),
     accountMenu: $('#accountMenu'),
     signOutBtn: $('#signOutBtn'),
+    syncBadge: $('#syncBadge'),
     addEntry: $('#addEntryBtn'),
     storageNote: $('#storageNote'),
 
@@ -243,6 +244,59 @@ export function mountDashboard({ store, user, onSignOut }) {
   /* rendering                                                         */
   /* ---------------------------------------------------------------- */
 
+  function currentSyncStatus() {
+    if (typeof store.getStatus === 'function') return store.getStatus();
+    return {
+      online: globalThis.navigator?.onLine !== false,
+      syncing: false,
+      pendingCount: 0,
+    };
+  }
+
+  function renderSyncStatus(status = currentSyncStatus()) {
+    const { online, syncing, pendingCount } = status;
+
+    if (syncing) {
+      setText(refs.syncBadge, 'Syncing…');
+      show(refs.syncBadge, true);
+      setText(refs.storageNote, 'Syncing offline changes to Supabase…');
+      return;
+    }
+
+    if (!online) {
+      setText(
+        refs.syncBadge,
+        pendingCount > 0 ? `Offline · ${pendingCount}` : 'Offline',
+      );
+      show(refs.syncBadge, true);
+      setText(
+        refs.storageNote,
+        pendingCount > 0
+          ? `Offline · ${pendingCount} ${pluralize(pendingCount, 'change')} saved on this device`
+          : 'Offline · showing your saved device copy',
+      );
+      return;
+    }
+
+    if (pendingCount > 0) {
+      setText(refs.syncBadge, `${pendingCount} unsynced`);
+      show(refs.syncBadge, true);
+      setText(
+        refs.storageNote,
+        `${pendingCount} ${pluralize(pendingCount, 'change')} waiting to sync`,
+      );
+      return;
+    }
+
+    show(refs.syncBadge, false);
+    setText(refs.storageNote, 'Stored in Supabase · cached for offline use');
+  }
+
+  function notifyWrite(onlineMessage, offlineMessage) {
+    const status = currentSyncStatus();
+    toast(!status.online || status.pendingCount > 0 ? offlineMessage : onlineMessage);
+  }
+
   function render() {
     renderMonthChrome();
     renderCategoryFilter();
@@ -252,7 +306,7 @@ export function mountDashboard({ store, user, onSignOut }) {
     renderEntries();
     renderBreakdown();
     renderInsights(totals);
-    setText(refs.storageNote, 'Stored in Supabase · visible only to you');
+    renderSyncStatus();
   }
 
   function renderMonthChrome() {
@@ -647,10 +701,10 @@ export function mountDashboard({ store, user, onSignOut }) {
     try {
       if (editing) {
         await store.updateTransaction(editing.id, payload);
-        toast('Entry updated.');
+        notifyWrite('Entry updated.', 'Changes saved offline — will sync when online.');
       } else {
         await store.createTransaction(payload);
-        toast('Entry added.');
+        notifyWrite('Entry added.', 'Entry saved offline — will sync when online.');
       }
       closeDialog(refs.entryDialog);
       state.editing = null;
@@ -728,9 +782,12 @@ export function mountDashboard({ store, user, onSignOut }) {
       await store.setBudget(period, periodStart, amount);
       closeDialog(refs.budgetDialog);
       await load();
-      toast(period === 'week'
-        ? 'Weekly budget saved.'
-        : `Budget set for ${monthLabel(state.month, { short: true })}.`);
+      notifyWrite(
+        period === 'week'
+          ? 'Weekly budget saved.'
+          : `Budget set for ${monthLabel(state.month, { short: true })}.`,
+        'Budget saved offline — will sync when online.',
+      );
     } catch (error) {
       setError(refs.budgetError, humanError(error, 'Could not save the budget.'));
     } finally {
@@ -747,7 +804,10 @@ export function mountDashboard({ store, user, onSignOut }) {
     try {
       await store.clearBudget(period, periodStart);
       await load();
-      toast(period === 'week' ? 'Weekly budget removed.' : 'Budget removed.');
+      notifyWrite(
+        period === 'week' ? 'Weekly budget removed.' : 'Budget removed.',
+        'Budget removed offline — will sync when online.',
+      );
     } catch (error) {
       toast(humanError(error, 'Could not remove the budget.'));
     }
@@ -808,7 +868,7 @@ export function mountDashboard({ store, user, onSignOut }) {
     try {
       await store.deleteTransaction(entry.id);
       await load();
-      toast('Entry deleted.');
+      notifyWrite('Entry deleted.', 'Deleted offline — will sync when online.');
       refs.entriesHeading.focus(); // the row that had focus is gone
     } catch (error) {
       toast(humanError(error, 'Could not delete that entry.'));
@@ -856,7 +916,19 @@ export function mountDashboard({ store, user, onSignOut }) {
     refs.accountEmail.title = email;
     setText(refs.signOutBtn, 'Sign out');
 
-    refs.signOutBtn.addEventListener('click', () => onSignOut?.());
+    refs.signOutBtn.addEventListener('click', async () => {
+      const pending = store.pendingCount?.() ?? 0;
+      if (pending > 0) {
+        const confirmed = await askConfirm({
+          title: 'Sign out with unsynced changes?',
+          message: `You have ${pending} offline ${pluralize(pending, 'change')} saved only on this device. Signing out now will discard ${pending === 1 ? 'it' : 'them'}.`,
+          confirmLabel: 'Sign out anyway',
+        });
+        if (!confirmed) return;
+      }
+      store.clearLocal?.();
+      onSignOut?.();
+    });
   }
 
   function goToMonth(monthKey) {
@@ -941,6 +1013,57 @@ export function mountDashboard({ store, user, onSignOut }) {
     });
   }
 
+  let cleanupConnectivity = () => {};
+
+  async function reconnectAndSync() {
+    if (typeof store.sync !== 'function') {
+      await load();
+      return;
+    }
+    try {
+      const { synced, remaining } = await store.sync();
+      await load();
+      if (synced > 0 && remaining === 0) {
+        toast(`Synced ${synced} offline ${pluralize(synced, 'change')}.`);
+      }
+    } catch {
+      await load();
+    }
+  }
+
+  function setupConnectivity() {
+    const unsubscribe = store.subscribe?.((status) => renderSyncStatus(status)) ?? (() => {});
+
+    const onOnline = () => {
+      store.markConnectivity?.(true);
+      reconnectAndSync();
+    };
+    const onOffline = () => {
+      store.markConnectivity?.(false);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine !== false && (store.pendingCount?.() ?? 0) > 0) {
+        reconnectAndSync();
+      }
+    };
+    const onSwMessage = (event) => {
+      if (event.data?.type === 'SYNC_NOW') reconnectAndSync();
+    };
+
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    document.addEventListener('visibilitychange', onVisibility);
+    navigator.serviceWorker?.addEventListener?.('message', onSwMessage);
+
+    cleanupConnectivity = () => {
+      unsubscribe();
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      document.removeEventListener('visibilitychange', onVisibility);
+      navigator.serviceWorker?.removeEventListener?.('message', onSwMessage);
+    };
+  }
+
   function start() {
     refs.insightPanel?.addEventListener('toggle', () => {
       if (refs.insightPanel.open) renderBreakdown();
@@ -950,6 +1073,7 @@ export function mountDashboard({ store, user, onSignOut }) {
     setupMonthNavigation();
     setupFilters();
     setupDialogs();
+    setupConnectivity();
     load();
 
   }
@@ -961,6 +1085,7 @@ export function mountDashboard({ store, user, onSignOut }) {
       return state.month;
     },
     destroy() {
+      cleanupConnectivity();
       destroyDonut();
     },
   };

@@ -214,6 +214,7 @@ function createSwHarness({
 
   let skippedWaiting = false;
   let claimedClients = false;
+  const postedMessages = [];
 
   const selfObj = {
     location: new URL(swUrl),
@@ -224,6 +225,9 @@ function createSwHarness({
     clients: {
       claim() {
         claimedClients = true;
+      },
+      async matchAll() {
+        return [{ postMessage: (msg) => postedMessages.push(msg) }];
       },
     },
     addEventListener(type, handler) {
@@ -238,6 +242,9 @@ function createSwHarness({
     Response,
     Headers,
     Request,
+    AbortController,
+    setTimeout,
+    clearTimeout,
     fetch: (...args) => networkImpl(...args),
   });
 
@@ -245,6 +252,7 @@ function createSwHarness({
 
   return {
     stores,
+    postedMessages,
     get skippedWaiting() {
       return skippedWaiting;
     },
@@ -259,6 +267,11 @@ function createSwHarness({
     async dispatchActivate() {
       const waits = [];
       listeners.get('activate')({ waitUntil: (p) => waits.push(p) });
+      await Promise.all(waits);
+    },
+    async dispatchSync(tag) {
+      const waits = [];
+      listeners.get('sync')({ tag, waitUntil: (p) => waits.push(p) });
       await Promise.all(waits);
     },
     dispatchFetch(request) {
@@ -321,7 +334,11 @@ test('sw.js caches every static app-shell file and works under both /Finora/ and
   assert.equal(harness.skippedWaiting, true);
   assert.equal(harness.claimedClients, true);
   assert.equal(harness.stores.has('finora-shell-old'), false);
-  assert.equal(harness.stores.has('finora-shell-v1'), true);
+  assert.equal(harness.stores.has('finora-shell-v2'), true);
+
+  await harness.dispatchSync('finora-sync');
+  assert.equal(harness.postedMessages.length, 1);
+  assert.equal(harness.postedMessages[0].type, 'SYNC_NOW');
 
   // Go offline: shell CSS and subpath navigation still resolve from cache!
   online = false;
