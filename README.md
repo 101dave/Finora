@@ -15,6 +15,11 @@ modules, with Supabase for real accounts and real storage.
 
 - **Accounts** — email and password sign-up / sign-in via Supabase Auth, with a
   confirmation email before the first sign-in.
+- **Password reset** — “Forgot password?” on the sign-in card emails a link;
+  opening it lands on a “choose a new password” card that saves through
+  `PUT /auth/v1/user` and drops you straight into your ledger. The request shows
+  the same message whether or not the address has an account, so it cannot be
+  used to discover who is registered.
 - **Entries** — income or expense, amount, category, date and an optional note.
   Edit and delete any entry.
 - **One month at a time** — move backwards and forwards through months; the
@@ -48,7 +53,7 @@ Sample-data mode (`?demo=1`) was removed on request, so the app is real accounts
 only — a visitor needs an account to see the dashboard.
 
 ```bash
-npm test        # 9 dependency-free unit tests (money, percentages, dates)
+npm test        # 12 dependency-free unit tests (money, dates, week maths)
 ```
 
 ---
@@ -179,10 +184,13 @@ That is the URL the portfolio case study links to.
 - [ ] Set a monthly budget and a weekly budget, reload, confirm both meters keep
       their values.
 - [ ] Sign out, sign back in; entries are still yours.
+- [ ] Tap **Forgot password?**, send the link, open it, set a new password, and
+      land on the dashboard.
 - [ ] A second account sees none of the first account's entries.
 
-The email round trip is the one step that cannot be automated from here; it has
-to happen in a browser with a real inbox.
+The two email round trips — confirming a new account and resetting a password —
+are the steps that cannot be automated from here; they need a browser and a real
+inbox.
 
 ---
 
@@ -218,6 +226,12 @@ sign and shape instead:
 
 Contrast: body text 19.4:1, secondary text 6.7:1, control borders 3.4:1, white on
 black buttons 19.4:1.
+
+The phone layout has tiers at 980 (tablet), 760 (large phone), 560 (phone),
+400 (small phone), 360 (very small) and 320 px, plus a short-landscape tier for
+`max-height: 520px`. Sizes are fluid in between — `clamp()` for money and padding,
+`min-width: 0` on every grid child — so a 393 px Pixel and a 430 px iPhone Max
+both land on sensible values, not just the exact breakpoints.
 
 On a phone the layout is rebuilt rather than squeezed:
 
@@ -256,13 +270,14 @@ that mattered were fixed in the same pass.
 
 - `npm test` — 12/12 unit tests, including Monday-of-the-week maths and the
   week-range label.
-- jsdom integration — 31 dashboard checks against a mocked GoTrue/PostgREST and
-  22 static + auth checks: every colour token is a pure grey, no dark-theme
-  selector exists, `prefers-color-scheme` is never read, the mobile rules
-  (bottom-sheet dialogs, 44px targets, 16px inputs, safe areas) are present, and
-  no request is made on boot.
-- axe-core — 0 WCAG A/AA violations in five runs: the auth screen with the OS
-  forced to dark, the dashboard, and the entry, budget and confirm dialogs.
+- jsdom integration — 71 checks in three processes: 42 for the auth screen and
+  the CSS contract (recover mode, generic reset copy, every breakpoint present),
+  19 for the recovery link (tokens adopted and stripped, mismatch and short
+  passwords refused, `PUT /auth/v1/user` with the recovery token), and 10 for the
+  dashboard (both meters, dialogs, no stray hash).
+- axe-core — 0 WCAG A/AA violations in six runs: sign-in, recover,
+  set-new-password, the dashboard with the OS forced to dark, and the entry and
+  budget dialogs.
 - RLS — two impersonated users: A saw 1 row and none of B’s, cross-user updates
   and deletes affected 0 rows, a forged `user_id` insert failed with `42501`,
   and `anon` was denied. Test users and rows were deleted afterwards; the
@@ -280,13 +295,14 @@ that mattered were fixed in the same pass.
 - **Password policy is 6 characters with no breach check.** Raise it under
   Authentication → Policies; change `MIN_PASSWORD_LENGTH` in `js/config.js` to
   match what you choose.
-- **No password reset, no CSV export**, and the **email confirmation round
-  trip** still needs a real inbox — it is the one thing that cannot be automated
-  here.
+- **No CSV export**, and the **confirmation / reset emails** still need a real
+  inbox — they are the two things that cannot be automated here.
+- **Reset emails are rate limited** by Supabase (2 per hour by default, shared
+  with confirmation mail). The form says so instead of failing silently; custom
+  SMTP lifts the ceiling.
 
 ## What I'd add next
 
-CSV export, recurring entries, a password-reset screen, and user-defined
-categories stored per account. Each is a real improvement, but none is needed
+CSV export, recurring entries, and user-defined categories stored per account. Each is a real improvement, but none is needed
 to make the core loop feel finished — and keeping that loop small is why the app
 is easy to read.
